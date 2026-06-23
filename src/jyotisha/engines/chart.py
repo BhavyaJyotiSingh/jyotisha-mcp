@@ -3,7 +3,8 @@ Chart Generation Engine — Layer C & D
 
 Generates Rashi (D1) and all Divisional (Varga) charts.
 Combines astronomical positions with house assignments,
-dignity calculations, and aspect computations.
+dignity calculations, aspect computations, planetary war,
+and Pushkara Navamsha.
 """
 
 from __future__ import annotations
@@ -22,12 +23,55 @@ from jyotisha.engines.astronomy import (
 from jyotisha.engines.calendar import CalendarEngine
 
 
+def is_pushkara_navamsa(sign_number: int, degree_in_sign: float) -> bool:
+    """
+    Check if a planet is in Pushkara Navamsha based on its sign and degree.
+    """
+    element_type = sign_number % 4
+    if element_type == 0:  # Fire (Aries, Leo, Sagittarius)
+        return (20.0 <= degree_in_sign <= 23.33333) or (26.66667 <= degree_in_sign <= 30.0)
+    elif element_type == 1:  # Earth (Taurus, Virgo, Capricorn)
+        return (6.66667 <= degree_in_sign <= 10.0) or (13.33333 <= degree_in_sign <= 16.66667)
+    elif element_type == 2:  # Air (Gemini, Libra, Aquarius)
+        return (16.66667 <= degree_in_sign <= 20.0) or (23.33333 <= degree_in_sign <= 26.66667)
+    elif element_type == 3:  # Water (Cancer, Scorpio, Pisces)
+        return (0.0 <= degree_in_sign <= 3.33333) or (6.66667 <= degree_in_sign <= 10.0)
+    return False
+
+
+def compute_graha_yuddhas(planets_data: dict[str, dict]) -> dict[str, str]:
+    """
+    Computes Graha Yuddha (planetary war) between Mars, Mercury, Jupiter, Venus, Saturn.
+    Returns a dict mapping planet name to its war status.
+    """
+    warring = ["Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
+    results = {}
+    
+    # Compare all pairs
+    for i in range(len(warring)):
+        for j in range(i + 1, len(warring)):
+            p1 = warring[i]
+            p2 = warring[j]
+            if p1 in planets_data and p2 in planets_data:
+                lon1 = planets_data[p1]["longitude"]
+                lon2 = planets_data[p2]["longitude"]
+                diff = abs(lon1 - lon2) % 360.0
+                diff = min(diff, 360.0 - diff)
+                
+                if diff <= 1.0:
+                    # Winner is the one with lower longitude (standard classical rule)
+                    if lon1 < lon2:
+                        results[p1] = f"Won against {p2}"
+                        results[p2] = f"Lost to {p1}"
+                    else:
+                        results[p2] = f"Won against {p1}"
+                        results[p1] = f"Lost to {p2}"
+    return results
+
+
 class ChartEngine:
     """
     Generates complete Vedic charts (Rashi + Divisional).
-
-    Orchestrates the astronomical engine, calendar normalization,
-    and chart construction pipeline.
     """
 
     def __init__(
@@ -35,18 +79,17 @@ class ChartEngine:
         ayanamsha: int = Ayanamsha.LAHIRI,
         house_system: str = "W",  # Whole Sign
         true_nodes: bool = True,
+        topocentric: bool = False,
     ):
         self.astro = AstronomicalEngine(
             ayanamsha=ayanamsha,
             true_nodes=true_nodes,
+            topocentric=topocentric,
         )
         self.calendar = CalendarEngine()
         self.house_system = house_system
         self.ayanamsha = ayanamsha
-
-    # ─────────────────────────────────────────────────────────
-    # Primary Chart Generation
-    # ─────────────────────────────────────────────────────────
+        self.topocentric = topocentric
 
     def generate_birth_chart(
         self,
@@ -58,16 +101,6 @@ class ChartEngine:
     ) -> Chart:
         """
         Generate a complete Vedic birth chart (D1/Rashi).
-
-        Args:
-            datetime_str: Date in "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM:SS"
-            latitude: Geographic latitude
-            longitude: Geographic longitude
-            time_str: Optional time in "HH:MM" (if not included in datetime_str)
-            location_name: Optional place name
-
-        Returns:
-            Complete Chart object with planets, houses, aspects.
         """
         # Parse datetime
         if "T" in datetime_str and time_str is None:
@@ -90,7 +123,6 @@ class ChartEngine:
 
     def generate_chart_from_event(self, event: BirthEvent) -> Chart:
         """Generate a chart from a normalized BirthEvent."""
-
         jd = event.julian_day
         lat = event.location.latitude
         lon = event.location.longitude
@@ -112,13 +144,16 @@ class ChartEngine:
             nakshatra=asc_raw["nakshatra"],
             nakshatra_number=asc_raw["nakshatra_number"],
             pada=asc_raw["pada"],
-            lord=SIGN_LORDS[Sign(asc_raw["sign_number"])],
+            lord=SIGN_LORDS[Sign(asc_raw["sign_number"])].value,
         )
 
-        # Assign houses (Whole Sign: house 1 = ascendant sign)
+        # Assign houses (Whole Sign)
         houses = self._build_houses(asc_sign_num)
 
-        # Build planet models with house assignments
+        # Compute planetary war (Graha Yuddha)
+        war_results = compute_graha_yuddhas(raw_positions)
+
+        # Build planet models
         planets = []
         for name, data in raw_positions.items():
             # Compute house number (Whole Sign)
@@ -127,9 +162,12 @@ class ChartEngine:
             # Compute dignity
             dignity = compute_dignity(name, data["sign_number"], data["degree_in_sign"])
 
-            # Check vargottama (same sign in D1 and D9)
+            # Check vargottama
             navamsa_sign = self._compute_navamsa_sign(data["longitude"])
             is_vargottama = (data["sign_number"] == navamsa_sign)
+
+            # Check Pushkara Navamsha
+            p_pushkara = is_pushkara_navamsa(data["sign_number"], data["degree_in_sign"])
 
             planet = PlanetPosition(
                 name=name,
@@ -143,25 +181,24 @@ class ChartEngine:
                 degree_in_sign=data["degree_in_sign"],
                 retrograde=data["retrograde"],
                 combust=data.get("combust", False),
+                planetary_war=war_results.get(name),
                 nakshatra=data["nakshatra"],
                 nakshatra_number=data["nakshatra_number"],
                 pada=data["pada"],
-                nakshatra_lord=data["nakshatra_lord"],
+                nakshatra_lord=data["nakshatra_lord"].value,
                 dignity=dignity,
                 vargottama=is_vargottama,
+                pushkara_navamsa=p_pushkara,
             )
             planets.append(planet)
 
-        # Compute aspects and add to houses
+        # Compute aspects
         aspects = compute_aspects(raw_positions)
         houses = self._assign_planets_and_aspects_to_houses(
             houses, planets, aspects, asc_sign_num
         )
 
-        # Get ayanamsha value
         ayan_value = self.astro.get_ayanamsha_value(jd)
-
-        # Ayanamsha name mapping
         ayan_names = {
             Ayanamsha.LAHIRI: "Lahiri",
             Ayanamsha.RAMAN: "Raman",
@@ -177,6 +214,7 @@ class ChartEngine:
             ayanamsha_value=round(ayan_value, 4),
             house_system="Whole Sign" if self.house_system == "W" else self.house_system,
             true_nodes=self.astro.true_nodes,
+            topocentric=self.topocentric,
             computed_at=datetime.now(timezone.utc),
         )
 
@@ -199,28 +237,27 @@ class ChartEngine:
     ) -> Chart:
         """
         Generate a divisional chart from a base D1 chart.
-
-        Args:
-            base_chart: The D1 (Rashi) chart
-            division: Varga division number (2, 3, 4, 7, 9, 10, 12, etc.)
-
-        Returns:
-            Chart object for the specified division.
         """
         varga_methods = {
-            2: self._compute_hora_sign,      # D2
-            3: self._compute_drekkana_sign,   # D3
-            4: self._compute_chaturthamsa_sign,  # D4
-            7: self._compute_saptamsa_sign,   # D7
-            9: self._compute_navamsa_sign,    # D9
-            10: self._compute_dasamsa_sign,   # D10
-            12: self._compute_dwadasamsa_sign,  # D12
-            16: self._compute_shodasamsa_sign,  # D16
-            20: self._compute_vimsamsa_sign,  # D20
-            24: self._compute_siddhamsa_sign, # D24
-            27: self._compute_bhamsa_sign,    # D27
-            30: self._compute_trimsamsa_sign, # D30
-            60: self._compute_shashtiamsa_sign, # D60
+            2: self._compute_hora_sign,
+            3: self._compute_drekkana_sign,
+            4: self._compute_chaturthamsa_sign,
+            5: self._compute_panchamsa_sign,
+            6: self._compute_shasthamsa_sign,
+            7: self._compute_saptamsa_sign,
+            8: self._compute_ashtamsa_sign,
+            9: self._compute_navamsa_sign,
+            10: self._compute_dasamsa_sign,
+            11: self._compute_rudramsa_sign,
+            12: self._compute_dwadasamsa_sign,
+            16: self._compute_shodasamsa_sign,
+            20: self._compute_vimsamsa_sign,
+            24: self._compute_siddhamsa_sign,
+            27: self._compute_bhamsa_sign,
+            30: self._compute_trimsamsa_sign,
+            40: self._compute_khavedamsa_sign,
+            45: self._compute_akshavedamsa_sign,
+            60: self._compute_shashtiamsa_sign,
         }
 
         if division not in varga_methods:
@@ -243,22 +280,24 @@ class ChartEngine:
 
             varga_planet = PlanetPosition(
                 name=planet.name,
-                longitude=planet.longitude,  # Keep original longitude for reference
+                longitude=planet.longitude,
                 latitude=planet.latitude,
                 distance=planet.distance,
                 speed=planet.speed,
                 sign=SIGN_NAMES[new_sign],
                 sign_number=new_sign,
                 house=house_num,
-                degree_in_sign=planet.degree_in_sign,  # Original degree
+                degree_in_sign=planet.degree_in_sign,
                 retrograde=planet.retrograde,
                 combust=planet.combust,
+                planetary_war=planet.planetary_war,
                 nakshatra=planet.nakshatra,
                 nakshatra_number=planet.nakshatra_number,
                 pada=planet.pada,
                 nakshatra_lord=planet.nakshatra_lord,
                 dignity=dignity,
                 vargottama=planet.vargottama,
+                pushkara_navamsa=planet.pushkara_navamsa,
             )
             varga_planets.append(varga_planet)
 
@@ -285,7 +324,7 @@ class ChartEngine:
                 nakshatra=base_chart.ascendant.nakshatra,
                 nakshatra_number=base_chart.ascendant.nakshatra_number,
                 pada=base_chart.ascendant.pada,
-                lord=SIGN_LORDS[Sign(asc_varga_sign)],
+                lord=SIGN_LORDS[Sign(asc_varga_sign)].value,
             ),
             planets=varga_planets,
             houses=houses,
@@ -298,7 +337,6 @@ class ChartEngine:
     # ─────────────────────────────────────────────────────────
 
     def _build_houses(self, asc_sign_num: int) -> list[House]:
-        """Build 12 houses starting from the ascendant sign (Whole Sign system)."""
         houses = []
         for i in range(12):
             sign_num = (asc_sign_num + i) % 12
@@ -307,7 +345,7 @@ class ChartEngine:
                 number=i + 1,
                 sign=SIGN_NAMES[sign_num],
                 sign_number=sign_num,
-                lord=SIGN_LORDS[sign],
+                lord=SIGN_LORDS[sign].value,
                 planets_in_house=[],
                 aspects_received=[],
             ))
@@ -320,8 +358,7 @@ class ChartEngine:
         aspects: dict,
         asc_sign_num: int,
     ) -> list[House]:
-        """Populate houses with planet occupants and received aspects."""
-        # Assign planets to houses
+        # Assign occupants
         for planet in planets:
             for house in houses:
                 if house.sign_number == planet.sign_number:
@@ -336,7 +373,7 @@ class ChartEngine:
                     house.lord_house = planet.house
                     break
 
-        # Assign aspects received
+        # Assign aspects
         for aspecting_planet, aspected_planets in aspects.items():
             for target in aspected_planets:
                 for planet in planets:
@@ -360,7 +397,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / (30.0 / 9))
-        # Starting sign based on element
         element = sign % 4
         starts = [0, 9, 6, 3]  # Fire→Aries, Earth→Cap, Air→Libra, Water→Cancer
         return (starts[element] + part) % 12
@@ -372,9 +408,9 @@ class ChartEngine:
         deg = longitude % 30
         if deg < 15:
             # Odd signs → Sun (Leo), Even signs → Moon (Cancer)
-            return Sign.LEO if sign % 2 == 0 else Sign.CANCER
+            return Sign.LEO.value if sign % 2 == 0 else Sign.CANCER.value
         else:
-            return Sign.CANCER if sign % 2 == 0 else Sign.LEO
+            return Sign.CANCER.value if sign % 2 == 0 else Sign.LEO.value
 
     @staticmethod
     def _compute_drekkana_sign(longitude: float) -> int:
@@ -382,7 +418,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 10)
-        # 1st decanate = same sign, 2nd = 5th sign, 3rd = 9th sign
         offsets = [0, 4, 8]
         return (sign + offsets[part]) % 12
 
@@ -397,6 +432,38 @@ class ChartEngine:
         return (sign + part * 3) % 12
 
     @staticmethod
+    def _compute_panchamsa_sign(longitude: float) -> int:
+        """D5 Panchamsha: 5 parts of 6° each."""
+        sign = int(longitude // 30)
+        deg = longitude % 30
+        part = int(deg / 6.0)
+        if part > 4:
+            part = 4
+
+        # Odd signs (Mesha, Mithuna, Simha, Tula, Dhanu, Kumbha)
+        odd_map = [Sign.ARIES.value, Sign.AQUARIUS.value, Sign.SAGITTARIUS.value, Sign.GEMINI.value, Sign.LIBRA.value]
+        # Even signs
+        even_map = [Sign.TAURUS.value, Sign.VIRGO.value, Sign.PISCES.value, Sign.CAPRICORN.value, Sign.SCORPIO.value]
+
+        if sign % 2 == 0:  # Odd sign (0-indexed: Aries is 0)
+            return odd_map[part]
+        else:
+            return even_map[part]
+
+    @staticmethod
+    def _compute_shasthamsa_sign(longitude: float) -> int:
+        """D6 Shasthamsa: 6 parts of 5° each."""
+        sign = int(longitude // 30)
+        deg = longitude % 30
+        part = int(deg / 5.0)
+        if part > 5:
+            part = 5
+
+        # Odd signs start from Aries, Even signs start from Libra
+        start = Sign.ARIES.value if sign % 2 == 0 else Sign.LIBRA.value
+        return (start + part) % 12
+
+    @staticmethod
     def _compute_saptamsa_sign(longitude: float) -> int:
         """D7 Saptamsha: 7 parts of 4°17'8.57\" each."""
         sign = int(longitude // 30)
@@ -404,25 +471,51 @@ class ChartEngine:
         part = int(deg / (30.0 / 7))
         if part > 6:
             part = 6
-        # Odd signs start from same sign, even signs start from 7th sign
-        if sign % 2 == 0:  # Odd sign (0-indexed)
+        if sign % 2 == 0:  # Odd sign
             return (sign + part) % 12
         else:
             return (sign + 6 + part) % 12
+
+    @staticmethod
+    def _compute_ashtamsa_sign(longitude: float) -> int:
+        """D8 Ashtamsha: 8 parts of 3°45' each."""
+        sign = int(longitude // 30)
+        deg = longitude % 30
+        part = int(deg / 3.75)
+        if part > 7:
+            part = 7
+
+        modality = sign % 3  # 0 = Movable, 1 = Fixed, 2 = Dual
+        if modality == 0:
+            start = sign
+        elif modality == 1:
+            start = (sign + 8) % 12
+        else:
+            start = (sign + 4) % 12
+        return (start + part) % 12
 
     @staticmethod
     def _compute_dasamsa_sign(longitude: float) -> int:
         """D10 Dasamsha: 10 parts of 3° each."""
         sign = int(longitude // 30)
         deg = longitude % 30
-        part = int(deg / 3)
+        part = int(deg / 3.0)
         if part > 9:
             part = 9
-        # Odd signs start from same, even from 9th
         if sign % 2 == 0:
             return (sign + part) % 12
         else:
             return (sign + 8 + part) % 12
+
+    @staticmethod
+    def _compute_rudramsa_sign(longitude: float) -> int:
+        """D11 Rudramsa: 11 parts of 2°43'38\" each."""
+        deg = longitude % 30
+        part = int(deg / (30.0 / 11.0))
+        if part > 10:
+            part = 10
+        # Starts from Aries for all signs
+        return part % 12
 
     @staticmethod
     def _compute_dwadasamsa_sign(longitude: float) -> int:
@@ -442,7 +535,6 @@ class ChartEngine:
         part = int(deg / (30.0 / 16))
         if part > 15:
             part = 15
-        # Movable→Aries, Fixed→Leo, Dual→Sagittarius
         modality = sign % 3
         starts = [0, 4, 8]
         return (starts[modality] + part) % 12
@@ -455,7 +547,6 @@ class ChartEngine:
         part = int(deg / (30.0 / 20))
         if part > 19:
             part = 19
-        # Movable→Aries, Fixed→Sagittarius, Dual→Leo
         modality = sign % 3
         starts = [0, 8, 4]
         return (starts[modality] + part) % 12
@@ -468,11 +559,10 @@ class ChartEngine:
         part = int(deg / (30.0 / 24))
         if part > 23:
             part = 23
-        # Odd signs start from Leo, even from Cancer
         if sign % 2 == 0:
-            return (Sign.LEO + part) % 12
+            return (Sign.LEO.value + part) % 12
         else:
-            return (Sign.CANCER + part) % 12
+            return (Sign.CANCER.value + part) % 12
 
     @staticmethod
     def _compute_bhamsa_sign(longitude: float) -> int:
@@ -482,7 +572,6 @@ class ChartEngine:
         part = int(deg / (30.0 / 27))
         if part > 26:
             part = 26
-        # Fire signs→Aries, Earth→Cancer, Air→Libra, Water→Capricorn
         element = sign % 4
         starts = [0, 3, 6, 9]
         return (starts[element] + part) % 12
@@ -491,33 +580,56 @@ class ChartEngine:
     def _compute_trimsamsa_sign(longitude: float) -> int:
         """
         D30 Trimshamsha: irregular division per BPHS.
-        Odd signs: Mars(5°), Saturn(5°), Jupiter(8°), Mercury(7°), Venus(5°)
-        Even signs: reverse order
         """
         sign = int(longitude // 30)
         deg = longitude % 30
 
         if sign % 2 == 0:  # Odd sign
             segments = [
-                (5, Sign.ARIES),      # Mars
-                (10, Sign.AQUARIUS),   # Saturn
-                (18, Sign.SAGITTARIUS),  # Jupiter
-                (25, Sign.GEMINI),     # Mercury
-                (30, Sign.LIBRA),      # Venus
+                (5, Sign.ARIES.value),      # Mars
+                (10, Sign.AQUARIUS.value),   # Saturn
+                (18, Sign.SAGITTARIUS.value),  # Jupiter
+                (25, Sign.GEMINI.value),     # Mercury
+                (30, Sign.LIBRA.value),      # Venus
             ]
         else:  # Even sign
             segments = [
-                (5, Sign.LIBRA),       # Venus
-                (12, Sign.GEMINI),     # Mercury
-                (20, Sign.SAGITTARIUS),  # Jupiter
-                (25, Sign.AQUARIUS),   # Saturn
-                (30, Sign.ARIES),      # Mars
+                (5, Sign.LIBRA.value),       # Venus
+                (12, Sign.GEMINI.value),     # Mercury
+                (20, Sign.SAGITTARIUS.value),  # Jupiter
+                (25, Sign.AQUARIUS.value),   # Saturn
+                (30, Sign.ARIES.value),      # Mars
             ]
 
         for boundary, result_sign in segments:
             if deg < boundary:
                 return result_sign
         return segments[-1][1]
+
+    @staticmethod
+    def _compute_khavedamsa_sign(longitude: float) -> int:
+        """D40 Khavedamsha: 40 parts of 0°45' each."""
+        sign = int(longitude // 30)
+        deg = longitude % 30
+        part = int(deg / 0.75)
+        if part > 39:
+            part = 39
+
+        start = Sign.ARIES.value if sign % 2 == 0 else Sign.LIBRA.value
+        return (start + part) % 12
+
+    @staticmethod
+    def _compute_akshavedamsa_sign(longitude: float) -> int:
+        """D45 Akshavedamsha: 45 parts of 0°40' each."""
+        sign = int(longitude // 30)
+        deg = longitude % 30
+        part = int(deg / (30.0 / 45.0))
+        if part > 44:
+            part = 44
+
+        modality = sign % 3  # Movable, Fixed, Dual
+        starts = [Sign.ARIES.value, Sign.LEO.value, Sign.SAGITTARIUS.value]
+        return (starts[modality] + part) % 12
 
     @staticmethod
     def _compute_shashtiamsa_sign(longitude: float) -> int:

@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Production-grade Vedic Astrology MCP Server"
 requires-python = ">=3.11"
 dependencies = [
+    "pyswisseph>=2.10.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.9.0",
@@ -16,9 +17,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ephemeris = [
-    "pyswisseph>=2.10.0"
-]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
