@@ -10,6 +10,7 @@ from jyotisha.models.schemas import Chart, SchoolResult, ConsensusPrediction
 from jyotisha.schools.parashara import ParasharaModule
 from jyotisha.schools.jaimini import JaiminiModule
 from jyotisha.schools.kp import KPModule
+from jyotisha.engines.explanation import ExplanationEngine
 
 class ConsensusEngine:
     """
@@ -27,6 +28,8 @@ class ConsensusEngine:
             "Jaimini": 0.3,
             "Krishnamurti Paddhati (KP)": 0.2
         }
+        
+        self.explainer = ExplanationEngine()
 
     def generate_consensus(self, chart: Chart, question: str) -> ConsensusPrediction:
         """
@@ -54,16 +57,26 @@ class ConsensusEngine:
         weighted_score = 0.0
         combined_reasoning = ""
         
+        confidences = []
+        
         for res in school_results:
             weight = self.weights.get(res.school, 0.3)
+            confidences.append(res.confidence)
+            
             if res.confidence > 0:
                 weighted_score += (res.confidence * weight)
                 total_weight += weight
-                combined_reasoning += f"[{res.school}]: {res.answer} (Confidence: {res.confidence})\n"
-                if res.reasoning:
-                    combined_reasoning += f"  Reasoning: {res.reasoning}\n"
+                combined_reasoning += self.explainer.explain_school_result(res.school, [res.reasoning]) + "\n"
                     
         final_confidence = (weighted_score / total_weight) if total_weight > 0 else 0.0
+        
+        # 3. Contradiction Engine Layer
+        contradiction_warning = ""
+        if confidences and (max(confidences) - min(confidences)) > 0.3:
+            contradiction_warning = "\n[CONTRADICTION DETECTED]: Significant divergence in confidence between schools. Classical texts may conflict on this placement."
+            combined_reasoning += contradiction_warning
+            # Lower final confidence due to contradiction
+            final_confidence *= 0.8
         
         final_conclusion = "Unable to reach a consensus."
         if final_confidence > 0.7:
