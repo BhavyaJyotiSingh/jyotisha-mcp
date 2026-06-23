@@ -56,26 +56,63 @@ class ParasharaModule:
 
     def predict(self, chart: Chart, question: str, target_date: Optional[str] = None) -> SchoolResult:
         """
-        Predict timing of an event using Parashara methods (Vimshottari Dasha + transits).
+        Predict timing of an event using Parashara methods (Vimshottari Dasha).
         """
-        # A full implementation would check Dasha lords, Antardasha lords, and their connection
-        # to the event's significator houses (e.g., House 7 for marriage).
+        if not target_date:
+            target_date = datetime.now().strftime("%Y-%m-%d")
+            
+        dashas = self.dasha_engine.compute_vimshottari_from_chart(chart, levels=2)
+        query_jd = self.dasha_engine._date_to_jd(target_date)
+        current = self.dasha_engine.get_current_dasha(dashas, query_jd)
+        
+        maha_lord = current.get("mahadasha", {}).get("lord")
+        antar_lord = current.get("antardasha", {}).get("lord")
         
         if question.lower() == "marriage":
             lord_7 = chart.get_house_lord(7)
+            karaka = "Venus"
+            house_7 = chart.get_house(7)
+            occupants = house_7.planets_in_house if house_7 else []
+            
+            # Check if dasha lords match significators
+            significators = set([lord_7, karaka] + occupants)
+            
+            confidence = 0.0
+            rules = []
+            
+            if maha_lord in significators:
+                confidence += 0.5
+                rules.append(f"Mahadasha lord {maha_lord} signifies marriage.")
+            if antar_lord in significators:
+                confidence += 0.3
+                rules.append(f"Antardasha lord {antar_lord} signifies marriage.")
+                
+            # Aspect on 7th house or lord
+            if maha_lord and house_7 and maha_lord in house_7.aspects_received:
+                confidence += 0.2
+                rules.append(f"Mahadasha lord {maha_lord} aspects 7th house.")
+                
+            confidence = min(1.0, confidence)
+            
+            answer = "Favorable period for marriage." if confidence > 0.5 else "Period does not strongly indicate marriage."
+            
             return SchoolResult(
                 school=self.school_name,
-                answer="Prediction requires advanced Dasha/Antardasha matching.",
-                confidence=0.5,
+                answer=answer,
+                confidence=round(confidence, 2),
                 sources=["BPHS Chapter on Marriage"],
-                reasoning=f"Must check dashas of 7th lord ({lord_7}) and Venus.",
-                rules_fired=[],
-                structured_data={"house_7_lord": lord_7, "karaka": "Venus"}
+                reasoning=f"Current Dasha is {maha_lord}/{antar_lord}. Significators are {list(significators)}.",
+                rules_fired=rules,
+                structured_data={
+                    "mahadasha": maha_lord,
+                    "antardasha": antar_lord,
+                    "significators": list(significators)
+                }
             )
             
         return SchoolResult(
             school=self.school_name,
-            answer="Not implemented for this question type.",
+            answer="Prediction logic only implemented for marriage.",
             confidence=0.0
         )
 

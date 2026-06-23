@@ -6,6 +6,7 @@ and generates a unified consensus report with confidence scoring.
 """
 
 
+from typing import Optional
 from jyotisha.models.schemas import Chart, SchoolResult, ConsensusPrediction
 from jyotisha.schools.parashara import ParasharaModule
 from jyotisha.schools.jaimini import JaiminiModule
@@ -31,7 +32,7 @@ class ConsensusEngine:
         
         self.explainer = ExplanationEngine()
 
-    def generate_consensus(self, chart: Chart, question: str) -> ConsensusPrediction:
+    def generate_consensus(self, chart: Chart, question: str, target_date: Optional[str] = None) -> ConsensusPrediction:
         """
         Takes a specific question/event type (e.g., "marriage", "career")
         and queries each school for a prediction.
@@ -41,15 +42,20 @@ class ConsensusEngine:
         school_results = []
         
         # Parashara Result
-        p_res = self.parashara.predict(chart, question=question)
+        p_res = self.parashara.predict(chart, question=question, target_date=target_date)
         school_results.append(p_res)
         
         # Jaimini Result
-        j_res = self.jaimini.predict(chart, question=question)
+        j_res = self.jaimini.predict(chart, question=question, target_date=target_date)
         school_results.append(j_res)
         
         # KP Result
-        k_res = self.kp.predict(chart, question=question)
+        # KP predict does not take target_date yet in this implementation, but for consistency if we add it:
+        try:
+            k_res = self.kp.predict(chart, question=question, target_date=target_date)
+        except TypeError:
+            k_res = self.kp.predict(chart, question=question)
+            
         school_results.append(k_res)
         
         # 2. Calculate weighted consensus

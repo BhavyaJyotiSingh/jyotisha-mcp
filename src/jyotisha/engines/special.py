@@ -23,6 +23,9 @@ class SpecialPointsEngine:
     def compute_special_lagnas(self, chart: Chart, sunrise_jd: float) -> list[SpecialLagna]:
         """
         Compute special lagnas: Hora, Ghati, Indu, and Pranapada Lagna.
+        Citations:
+        - Hora, Ghati, and Pranapada: Brihat Parashara Hora Shastra (BPHS), Chapter 7.
+        - Indu Lagna: Kalidasa's Uttara Kalamrita.
         """
         lagnas = []
         if not chart.birth_event:
@@ -123,8 +126,12 @@ class SpecialPointsEngine:
 
     def compute_upagrahas(self, chart: Chart, sunrise_jd: float, sunset_jd: float) -> list[Upagraha]:
         """
-        Compute positions of Gulika, Mandi, Yamakantaka, Mrityu, Kaala, Ardhaman,
-        and Sun-derived Aprakasha Grahas: Dhuma, Vyatipata, Parivesha, Indrachapa, Upaketu.
+        Compute positions of time-based Upagrahas (Gulika, Mandi, Yamakantaka, etc.) 
+        and Sun-derived Aprakasha Grahas (Dhuma, Vyatipata, Parivesha, Indrachapa, Upaketu).
+        Citations:
+        - Time-based Upagrahas (Gulika etc): BPHS Chapter 25. Gulika is calculated at the start
+          of Saturn's 1/8th segment, while Mandi is at the midpoint (following standard Kerala tradition).
+        - Sun-derived Upagrahas (Dhuma etc): BPHS Chapter 3, Slokas 61-64.
         """
         upagrahas = []
         if not chart.birth_event:

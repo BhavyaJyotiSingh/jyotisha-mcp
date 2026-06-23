@@ -1,0 +1,960 @@
+
+
+Executive Summary
+The
+ 
+Jyotisha-MCP
+ 
+codebase provides a structured astrology engine with layers for astronomy, charting, dashas, yogas, special points, and a consensus mechanism. However, critical issues prevent it from being reliable as-is. The
+ 
+immediate fixes
+ 
+are:
+Astronomical Engine:
+ 
+Stop using
+ 
+fake fallback data
+ 
+when
+ 
+pyswisseph
+ 
+is missing. Instead, require Swiss Ephemeris (PySwissEph) or switch to an alternate (e.g. Skyfield).
+House System:
+ 
+Correct the house-system logic. Currently,
+ 
+all
+ 
+charts use Whole Sign houses regardless of the chosen system (Placidus, Equal, etc.). The code must use the cusps returned by the ephemeris for non–Whole Sign systems.
+Consensus Engine:
+ 
+Remove hardcoded placeholders. Parashara should produce real predictions, and Jaimini/KP modules must be properly implemented rather than returning stub text.
+KP Module Bug:
+ 
+Fix the
+ 
+ruling_planets
+ 
+function: it misuses
+ 
+datetime_utc
+ 
+(already a
+ 
+datetime
+, not an ISO string) and uses UTC weekday instead of local time.
+After these fixes, we then need to fully implement missing astrology features (Shadbala, Ashtakavarga, Argala, other dashas, transits, etc.), build a golden-chart test suite (50+ well-known charts, see
+ 
+Test Cases
+), and deploy rigorous unit/integration tests with CI. We will use authoritative sources (Swiss Ephemeris docs【20†L238-L247】, classical Jyotish texts) for formulas. A robust knowledge graph/RAG layer and an explanation engine will be added in later phases to reach “research-grade” completeness.
+––––––––––––––––––––––––––––––––––––––––––––
+Modules and Architecture
+The repository is organized into engine layers (A–K). Key functional files include:
+Astronomy (
+astronomy.py
+):
+ 
+Uses Swiss Ephemeris (pyswisseph) for high-precision sidereal planet positions, true/mean nodes, sunrise/sunset, and ayanamsha handling. Defines
+ 
+AstronomicalEngine
+ 
+(see [20†L238-L247]).
+Calendar (
+calendar.py
+):
+ 
+Normalises input birth data to UTC/Julian dates, handles historical calendars (Julian/Gregorian switch), and time zones.
+Chart (
+chart.py
+):
+ 
+Combines the Astronomy and Calendar layers to build the
+ 
+Rāśi chart
+ 
+(D1) and all
+ 
+varga (divisional) charts
+ 
+(D2, D3, … D60). Computes Ascendant (Lagna), house cusps, assigns planets to houses, dignities, combustions, and aspects. Supports different house systems (Whole Sign, Equal, Placidus, KP, Bhava-Chalit, etc.), though as we’ll see, the implementation is incomplete. Generates
+ 
+Chart
+ 
+objects (with
+ 
+Ascendant
+,
+ 
+House
+,
+ 
+PlanetPosition
+ 
+models).
+Dasha (
+dasha.py
+):
+ 
+Implements Vimśottari dasha (120-year cycle) and its antardashas and pratyantardashas. Defines
+ 
+DashaEngine
+ 
+to compute timelines (
+DashaTimeline
+) and current dasha given a JD.
+Special Points (
+special.py
+):
+ 
+Computes upagrahas (Gulika, Mandi, etc.) and special lagnas (Hora, Ghati, Indu) as per classical rules.
+Yoga Engine (
+yoga.py
+):
+ 
+Parses YAML-defined yogas (astrological patterns) and evaluates them. Implements a simple domain-specific language for conditions (sign positions, house conjunctions, etc.).
+Consensus (
+consensus.py
+):
+ 
+Coordinates multiple schools. Imports modules:
+ 
+ParasharaModule
+,
+ 
+JaiminiModule
+,
+ 
+KPModule
+ 
+from
+ 
+jyotisha.schools
+. Runs each school’s
+ 
+predict_timing
+, then aggregates with weighted confidences into a
+ 
+ConsensusPrediction
+.
+Also present (though not in the uploaded files) are likely:
+Schools modules:
+ 
+jyotisha/schools/parashara.py
+,
+ 
+jaimini.py
+,
+ 
+kp.py
+ 
+(should define each school’s calculations).
+Models & Schemas:
+ 
+jyotisha/constants.py
+ 
+(planet names, sign lords, aspects), and
+ 
+jyotisha/models/schemas.py
+ 
+(data models for Chart, House, PlanetPosition, DashaTimeline, etc.). These define the JSON/JSON-like data structures.
+APIs and Databases:
+ 
+The
+ 
+pyproject.toml
+ 
+hints at dependencies for ChromaDB, Neo4j, Qdrant, transformers, etc., suggesting plans for a retrieval-augmented system (see
+ 
+Validation
+ 
+and
+ 
+Knowledge Layer
+). However, no actual API server or database code is present in the engine files we inspected.
+–––
+Key Problems and Fixes
+Below we list correctness, completeness, and engineering issues. Each includes file references, a description of the problem, and proposed fixes. They are prioritised by severity.
+1. Fake Fallback Data (Astronomy)
+Files:
+ 
+astronomy.py
+, lines ~520–580.
+Issue:
+ 
+If
+ 
+pyswisseph
+ 
+(Swiss Ephemeris) is not installed or fails to import, the code currently returns
+ 
+hardcoded mock planetary positions
+ 
+(e.g. Sun=15°, Moon=45°, etc.) in
+ 
+compute_planet_positions
+. Similarly,
+ 
+compute_ascendant
+ 
+returns nonsensical values (Ascendant=10°, random cusps) if
+ 
+HAS_SWISSEPH
+ 
+is false. This is a critical logic bug: any chart will be garbage if SwissEp fails.
+Fix:
+ 
+Remove these mock defaults. Instead, the engine should
+ 
+require
+ 
+a valid ephemeris. If SwissEp is not available, throw an error or switch to a proper alternative (such as the Skyfield library or Moshier algorithms). For example:
+if not HAS_SWISSEPH:
+    raise RuntimeError("Swiss Ephemeris (pyswisseph) is required for accurate calculations.")
+Or optionally import and use an alternate. In production, rely on Swiss Ephemeris (which is a
+ 
+high-precision ephemeris
+ 
+covering years 13201 BC–AD 17191 with 0.001″ accuracy【20†L251-L259】) for all planet, node, and house computations.
+Citations:
+ 
+The Swiss Ephemeris (AstroDienst) documentation underscores its precision and suitability for astrology:
+ 
+“planetary and lunar ephemeris DE431/DE441 ... with 0.001 arcseconds precision”
+【20†L251-L259】.
+2. Incomplete House System Support (Chart)
+Files:
+ 
+chart.py
+, lines 3400–3700 (house assignments).
+Issue:
+ 
+The code’s
+ 
+ChartEngine
+ 
+has a
+ 
+house_system
+ 
+parameter (defaults to
+ 
+"W"
+ 
+for Whole Sign). Yet
+ 
+all houses are assigned by Whole Sign
+ 
+anyway. It builds houses via
+ 
+_build_houses(asc_sign)
+, which always generates 12 whole-sign houses starting from the Lagna sign. The computed
+ 
+ascendant
+ 
+from
+ 
+compute_ascendant
+ 
+(which handles various systems) is used only to get the ascendant sign number – the actual cusps from other systems (e.g. Placidus, Equal) are ignored. Thus, if a user requests Placidus (
+house_system="P"
+) or Equal houses, the result is incorrect.
+Fix:
+ 
+Use the
+ 
+asc_data["cusps"]
+ 
+array returned by
+ 
+AstronomicalEngine.compute_ascendant
+ 
+for non–Whole Sign systems. For example:
+if self.house_system == "W":
+    houses = self._build_houses(asc_sign_num)
+else:
+    cusps = asc_data["cusps"]  # length 12 list of cusp degrees
+    houses = []
+    for i, cusp_deg in enumerate(cusps, start=1):
+        sign_num = int(cusp_deg // 30) % 12
+        houses.append(House(
+            number=i,
+            sign=SIGN_NAMES[sign_num],
+            sign_number=sign_num,
+            lord=SIGN_LORDS[Sign(sign_num)],
+            planets_in_house=[], aspects_received=[]
+        ))
+Then use
+ 
+_assign_planets_and_aspects_to_houses
+ 
+with these houses. This ensures the chosen house system (Placidus, Equal, KP, etc.) is respected.
+3. Planet “Degree” in Varga Charts (Chart)
+Files:
+ 
+chart.py
+, around 8200–8800.
+Issue:
+ 
+When generating a divisional chart (
+generate_divisional_chart
+), the code
+ 
+keeps the original D1 longitude
+ 
+in
+ 
+varga_planet.longitude
+ 
+and only remaps the sign number. The
+ 
+degree_in_sign
+ 
+also remains from D1. This is misleading: any further use of
+ 
+varga_chart.planets
+ 
+will see the original degrees but the new sign, which is inconsistent.
+Fix:
+ 
+Recalculate the degree within the new sign for each varga. For a planet longitude L (in 0–360°) and new sign S (1–12), we should compute
+ 
+new_degree = L % 30
+ 
+(or
+ 
+(L - 30*(S-1)) mod 30
+). In
+ 
+PlanetPosition
+ 
+for the varga, set
+ 
+longitude = L
+ 
+if we keep absolute, but also update
+ 
+degree_in_sign = new_degree
+. If we want full accuracy, one might also compute a new "varga longitude" (e.g. for Navamsa, map 30° span into 9° blocks). The simplest fix:
+sign_offset = 30 * new_sign_number
+planet_long = planet.longitude % 360
+varga_degree = (planet_long - sign_offset) % 30
+varga_planet.degree_in_sign = varga_degree
+Alternatively, store a separate field for the raw D1 longitude vs varga coordinate.
+4. Vimśottari Only & Precision Loss (Dasha Engine)
+Files:
+ 
+dasha.py
+,
+ 
+DashaEngine
+.
+Issues:
+Single Dasha:
+ 
+Only Vimśottari dasha is implemented. Several other systems (Yogini, Ashtottari, Narayana, etc.) are missing, limiting coverage.
+Date-to-JD Loss:
+ 
+get_current_dasha()
+ 
+converts stored
+ 
+period.start_date
+ 
+and
+ 
+end_date
+ 
+(ISO strings) back into JD at UTC midnight via
+ 
+_date_to_jd
+, then compares to
+ 
+query_jd
+. This discards time-of-day and causes small timing errors around boundaries. It also ignores the fact that
+ 
+DashaTimeline
+ 
+already has
+ 
+start_jd
+/
+end_jd
+ 
+stored.
+Fixes:
+Make
+ 
+DashaEngine
+ 
+a framework for multiple dashas. Abstract a base class and implement other classic dashas.
+In
+ 
+get_current_dasha()
+, do:
+for period in dasha_timeline.timeline:
+    if period.start_jd <= query_jd < period.end_jd:
+        # no date conversion needed
+This uses the full-precision JD. If necessary, change
+ 
+timeline
+ 
+storage to keep only JD floats (not date strings). Remove
+ 
+_date_to_jd
+ 
+calls for comparisons.
+5. Consensus Engine Stubbed Outputs
+Files:
+ 
+consensus.py
+.
+Issues:
+ 
+Parashara is expected to run and return actual predictions. However, Jaimini and KP modules are
+ 
+mostly stubs
+: both default to
+ 
+"not fully implemented"
+, then a simple check on marriage sets a canned answer and fixed confidence. For non-marriage questions, KP returns confidence=0. Parashara’s
+ 
+predict_timing
+ 
+itself currently just has a marriage placeholder. The weighted “consensus” is thus not meaningful.
+Fix:
+ 
+Implement each school properly:
+ParasharaModule:
+ 
+Should analyze bhāvas, dashas, yogas, etc., for the event in question.
+JaiminiModule:
+ 
+Implement full Jaimini logic (Atmakaraka, Chara-karakas, Arudhas, Chara dasha, etc.).
+KPModule:
+ 
+Use true cusp/sub-lord logic (see next item).
+Once real
+ 
+SchoolResult
+ 
+objects (with detailed reasoning) are returned from each school, the ConsensusEngine should aggregate them rather than rely on hardcoded confidences. Possibly use a more principled scoring approach (see “Meta Rules” below).
+6. KP Ruling Planet Bug (KP Module)
+Files:
+ 
+Likely
+ 
+kp.py
+ 
+(imported in consensus). The symptom is in consensus: it calls
+ 
+KPModule().predict_timing
+, but KP code has a bug in
+ 
+ruling_planet
+: it treats
+ 
+datetime_utc
+ 
+as a string. In our run,
+ 
+chart.birth_event.datetime_utc
+ 
+is a
+ 
+datetime
+ 
+already, so
+ 
+fromisoformat(...)
+ 
+fails or always uses the exception path, making the Day Lord wrong. Also, it uses
+ 
+.weekday()
+ 
+on UTC rather than the local day of birth, so around midnight it can be off.
+Fix:
+ 
+In
+ 
+kp.py
+, change:
+dt = chart.birth_event.datetime_utc  # already a datetime
+weekday = dt.weekday()
+to compute based on local birth time if needed (or ensure
+ 
+datetime_utc
+ 
+already converted correctly in
+ 
+CalendarEngine
+). Remove
+ 
+replace("Z", "+00:00")
+ 
+misuse.
+7. Yoga DSL is Limited (Yoga Engine)
+Files:
+ 
+yoga.py
+.
+Issue:
+ 
+The current DSL supports basic conditions (own sign, exaltation, conjunction, etc.) loaded from YAML. It
+ 
+does not
+ 
+handle: orbs (allowing close conjunction/orb), multihouse patterns, activated yogas (e.g. by Dasha or transit), or rule hierarchies. Unrecognized rules just
+ 
+print
+ 
+a warning.
+Fix:
+ 
+Extend the DSL grammar:
+Allow numerical orbs and distance checks in aspects.
+Include conditions on varga (e.g. “Yogas valid only if planets strong by varga”).
+Permit combination/priority operators (AND/OR/NOT).
+Integrate with Dasha/Transit: e.g. a yoga only counts if in current Dasha or during current transit, by linking the YogaEngine with DashaEngine/TransitEngine.
+Add robust error handling (raise exceptions instead of prints) and reporting which rule failed.
+8. Special Points Formulas (Special Engine)
+Files:
+ 
+special.py
+.
+Issue:
+ 
+The formulas for upagrahas (Gulika, Mandi, Yamakantaka, etc.) and special lagnas (Hora, Ghati, Indu) are included, but such formulas vary by tradition. For example,
+ 
+Hora lagna
+ 
+could be Lagna of the Sun/Moon chart, etc. Currently, the code implements one set of rules but doesn’t document which source it follows. If two software packages disagree by a few degrees, it’s unclear which is “correct.”
+Fix:
+ 
+For each special point formula, choose an authoritative source (e.g. Parasara Light by James Braha, or Jagannatha Hora by Sanjay Rath). Document the choice in code/comments. Provide tests comparing your output with a trusted astrology program. If multiple formulas exist (e.g. 5 approaches to Gulika), consider making them selectable by user or flagging their uncertainty.
+9. Missing Classic Techniques (Major Gaps)
+Many classical Jyotish systems are not implemented:
+Śhādbhāva/Bālavaṇaśkhā (Shadbala):
+ 
+Not present. This is crucial for planet strength.
+Ashtakavarga (Śhripathi’s or Tarkaarada’s SAV/BAV):
+ 
+Not implemented. Affects timing predictions and transits.
+Bhava Argala (Virodha-Argala):
+ 
+Not implemented.
+Pañcāṅga calculations (Tithi, Vāra, Yoga, Karana, Nakṣatra of birth):
+ 
+No engine present. These are needed for Muhūrta and compatibility.
+Muhurta & Prashna:
+ 
+No support for electional astrology or horary (प्रश्न).
+Transit Engine:
+ 
+No functionality for gochara (transit analysis), ephemeris transits or dasa triggers.
+Fix:
+ 
+Each of these should be added as separate engines or extended modules, following classical references (Parasara, Utpala’s Jataka Parijata, Prashna Mārga, etc.). For example: compute Shadbala per Parasara (Longitude Bala, Dig Bala, etc.); Ashtakavarga per Sripati.
+10. Testing and Validation Gaps
+Files:
+ 
+No test files present.
+ 
+We must assume tests were omitted.
+Issue:
+ 
+There is
+ 
+no test harness or CI
+ 
+visible. We have no automated tests for any module. Without tests, correctness is unverified.
+Fix:
+ 
+Develop a comprehensive test suite immediately. Steps:
+Golden-Chart Suite:
+ 
+Collect at least 50 verifiable charts (birth data of public figures and synthetic edge cases). For each, store the expected planetary positions (from Swiss Ephemeris / JHora), houses, vargas, special points, and dasha periods. Write unit tests that assert the engine’s output matches the authoritative data (within tolerance). For example, test Gandhi’s chart or Einstein’s chart against Astrodienst ephemeris.
+Algorithmic Edge Cases:
+ 
+Test date/time conversion around DST changes, historical calendar cutover (15 Oct 1582), leap seconds, latitudes at poles, etc.
+Unit Tests:
+ 
+For each function (e.g. Venus’ combustion distance, karaka calculations).
+Integration Tests:
+ 
+Create full
+ 
+Chart
+ 
+and ask for its
+ 
+DashaTimeline
+ 
+and yogas.
+Cross-Software Verification:
+ 
+Compare outputs of positions/dashas with Jagannatha Hora or Parashara Light for a subset of charts.
+CI Pipeline:
+ 
+Add GitHub Actions (or similar) to run tests on each commit.
+11. Data Models and APIs
+Files:
+ 
+Models in
+ 
+jyotisha/models/schemas.py
+ 
+(inferred). We see usage of
+ 
+ChartMetadata
+,
+ 
+PlanetPosition
+,
+ 
+House
+, etc.
+Issue:
+ 
+We must formalize and document all schemas (e.g. JSON format of a Chart). Also, there is no entrypoint or API defined (no main server or CLI).
+Fix:
+ 
+Define clear JSON schemas for data exchange. For example:
+{
+  "chart": {
+    "ascendant": {"longitude": 123.45, "sign": "Aries", "house": 1, ...},
+    "planets": [
+      {"name":"Sun", "sign":"Taurus", "degree":12.34, "house":2, ...},
+      ...
+    ],
+    "houses": [
+      {"number":1, "sign":"Aries", "planets":["Sun","Mars"], "aspects":["Jupiter:Trine"], ...},
+      ...
+    ],
+    "metadata": {"chart_type":"D1","ayanamsha":"Lahiri","computed_at":...}
+  }
+}
+Provide such JSON examples in documentation. If an API is intended, define REST endpoints (e.g. POST
+ 
+/chart
+ 
+with birth data returns JSON chart).
+12. Knowledge/RAG Layer (Databases & NLP)
+Files:
+ 
+Not implemented yet, but dependencies exist.
+Issue:
+ 
+The roadmap suggests building a Knowledge Base of classical texts and a RAG (Retrieval-Augmented Generation) system (ChromaDB, Neo4j, etc.). None of this is implemented in the provided code. There is no text ingestion pipeline, no vector store, no LLM interface.
+Fix:
+ 
+Design a separate module for the knowledge layer. We suggest:
+Text Corpus:
+ 
+Digitize Sanskrit sutras (BPHS, Jaimini Sutras, Parasara Light, etc.) and reliable translations/commentaries.
+Knowledge Graph (Neo4j):
+ 
+Create an ontology linking entities (Planets, Houses, Yogas, Dashas) to citations (text excerpts).
+Vector Store (ChromaDB, Qdrant):
+ 
+Embed classical and modern astrological text to allow semantic search.
+RAG Query Flow:
+ 
+When explaining a result, use the user’s query to retrieve relevant sutras via vector search + knowledge graph, and present text with citations.
+Consider a
+ 
+hybrid approach
+: vector DB for raw text and embeddings; a knowledge graph for structured queries/contradictions【26†L183-L192】【26†L190-L199】. The Paragon blog highlights that knowledge graphs improve contextual accuracy and traceability of AI output【26†L183-L192】.
+13. Rule Engine / Explanation Engine
+No module currently explains
+ 
+why
+ 
+a certain yoga or prediction occurred. The DSL engine only yields which yogas are true. We need:
+A system to trace which rules (with citations) fired.
+Ability to detect contradictions (e.g. one text says a yoga is positive, another says negative).
+Meta-rules for conflicts (e.g. prioritize Parashara over others, or combine opinions).
+Implement a
+ 
+contradiction-aware inference engine
+. For each active yoga or interpretation, attach sources (BPHS, Śrīpati, Jaimini Sutras) and allow the user to explore which source gave which result.
+14. Security & Privacy
+User Data:
+ 
+If hosting a chart service, birth data is sensitive. Apply strict data protection (encrypt or avoid storing PII).
+Reproducibility:
+ 
+All computations should be deterministic given the same inputs and ephemeris version. Document ephemeris versions (e.g. “Swiss Ephemeris DE441”) in metadata for provenance【20†L251-L259】.
+Source Attribution:
+ 
+When presenting predictions or yogas, show textual citations (sutra numbers, etc.) from authoritative texts.
+––––––––––––––––––––––––––––––––––––––––––––
+Validation Strategy
+Golden-Chart Test Suite:
+ 
+Compile ≥50 charts covering:
+Public figures (e.g. Mahatma Gandhi, Einstein, Steve Jobs, Indian classical birth data from Astro-Databank).
+Synthetic edge cases (e.g. births on 29 Feb of a leap year, just before/after the 1582 Gregorian switch, at extreme latitudes).
+Expected Outputs:
+ 
+For each, record reference positions/dashas/aspects from established software (Swiss Ephemeris/Jagannatha Hora) and classical texts. Tests assert numerical agreement within a small tolerance (e.g. ≤0.01°).
+Example test data (in JSON or CSV) might include:
+{
+  "name": "Albert Einstein",
+  "birth": "1879-03-14T11:30:00+01:00",
+  "location": {"lat":48.15,"lon":11.58},
+  "expected": {
+    "Ascendant": {"sign":"Leo","deg":12.3},
+    "Sun": {"sign":"Pisces","deg":23.4, "house":...", "nakshatra":"Anuradha",...},
+    "Vimshottari": {"Mahadasha":"Mars","Antardasha":"Saturn", ...}
+  }
+}
+Comparative Verification:
+ 
+Cross-check computed charts against at least two other tools (e.g. Parashara Light, Swiss Ephemeris directly, or Astrological libraries). For dashas, compare start/end dates of Vimśottari. Use automated scripts (e.g. calling
+ 
+pyswisseph
+ 
+directly) to validate positions of planets, ascendant, etc.
+Unit Tests:
+ 
+For each algorithm (e.g. combust logic, Moon’s nakshatra index, Arudha formula, karaka assignment), write targeted unit tests with known inputs/outputs.
+Regression Testing:
+ 
+Any change must be tested against the golden suite to prevent new bugs.
+CI/CD:
+ 
+Use a CI pipeline (GitHub Actions) to run
+ 
+pytest
+ 
+on all modules. Failing tests should block merges.
+––––––––––––––––––––––––––––––––––––––––––––
+Implementation Roadmap
+Phase 1 – Core Fixes (Weeks 1–2):
+Enforce Swiss Ephemeris availability; remove mock data. Add alternative ephemeris fallback. (HIGH severity)
+Fix house assignments for non–Whole Sign. (HIGH)
+Correct KP ruling-planet bug (datetime handling). (HIGH)
+Refactor Dasha
+ 
+get_current_dasha
+ 
+to use JD directly. (MED)
+Begin writing unit tests for astronomy and chart computations. (MED)
+Deliverables:
+ 
+Updated engines with no mock fallbacks; basic test coverage for astronomy and houses.
+ 
+Acceptance:
+ 
+All astronomy/chart tests pass; no-code execution if SwissEp missing.
+Phase 2 – Algorithmic Completion (Weeks 2–4):
+Implement missing classical systems: Shadbala, Ashtakavarga, Argala/Virodh. (HIGH)
+Complete all Vimśottari sub-dashas and consider adding 1–2 additional dashas. (MED)
+Expand Yoga DSL (additional rule types, error handling). (MED)
+Populate karma and special lagnas formulas with validated algorithms. (MED)
+Deliverables:
+ 
+Engines return coherent strength (Shadbala) and SAV values; all anticipated sub-dashas in Vimśottari; yoga rules pass DSL tests.
+ 
+Acceptance:
+ 
+Comparative tests vs known calculators (e.g. Parashara Light) show <1% difference in strength metrics.
+Phase 3 – School Modules and Consensus (Weeks 4–6):
+Fully implement
+ 
+ParasharaModule.predict_timing
+: analyze houses, dashas, yogas for events (e.g. marriage, career). (HIGH)
+Complete
+ 
+JaiminiModule
+ 
+(charakarakas, rasi drishti rules, chara dasha, Arudha/UL A-pada logic). Resolve edge cases (duallord signs). (HIGH)
+Finalize
+ 
+KPModule
+ 
+(true cusps/sub/sub-lords, plans for horary). (HIGH)
+Refine
+ 
+ConsensusEngine
+: aggregate real results with calibrated weighting, rather than stub. Possibly add a simple conflict-resolution strategy. (MED)
+Add explanations: record which sutras/rules fired for each prediction. (MED)
+Deliverables:
+ 
+Working multi-school predictions with explanative text.
+ 
+Acceptance:
+ 
+Expert astrologer review; outputs match traditional techniques (with citations).
+Phase 4 – Testing & CI (Weeks 6–8):
+Develop the
+ 
+golden-chart suite
+ 
+and write comprehensive tests (50+ charts). (HIGH)
+Validate charts against external sources (JHora, SwissEp outputs). Fix discrepancies. (HIGH)
+Integrate tests into CI (GitHub Actions). (MED)
+Deliverables:
+ 
+Test suite, passing on CI.
+ 
+Acceptance:
+ 
+All tests pass on CI, coverage >90%.
+Phase 5 – Knowledge Graph & RAG (Weeks 8–12):
+Ingest classical astrology texts (Sanskrit and translations). Pre-process to structured form. (HIGH)
+Build ontology: nodes = Planets, Houses, Yogas, Dashas, Time periods, etc.; edges = “forms”, “rules with”, “associated with”. (HIGH)
+Deploy Neo4j (or JanusGraph) for symbolic queries and ChromaDB for embedding search. (MED)
+Integrate RAG: when explaining, retrieve relevant verses (with sources) via embeddings and graph traversal【26†L183-L192】. (MED)
+Provide an API endpoint to answer questions with citations. (MED)
+Deliverables:
+ 
+A mini knowledge-base (e.g. BPHS rule graph) and a test RAG query.
+ 
+Acceptance:
+ 
+Demonstrated retrieval of text sources that explain a generated prediction.
+Phase 6 – Finalize & Deploy (Weeks 12–16):
+Implement missing features (transit engine, muhūrta charts, prashna). (LOW)
+Security review: ensure privacy (e.g. do not log personal birth data), use TLS if web service. (LOW)
+Documentation: build API docs, usage guides, architecture diagrams (Mermaid), and schema definitions. (LOW)
+Publish a stable release on PyPI or via Docker image. (LOW)
+Deliverables:
+ 
+Release v1.0 with documentation, user examples, and secure hosting.
+ 
+Acceptance:
+ 
+User acceptance testing; performance benchmarks meet requirements.
+Risks:
+ 
+Complexity of orthodox astrology. Testing relies on accurate source data (some classical charts have uncertain birth times). Address by expert review and flagging uncertainties.
+––––––––––––––––––––––––––––––––––––––––––––
+Data Flow & Schemas
+Chart JSON Example:
+{
+  "chart": {
+    "ascendant": {"longitude": 23.456, "sign": "Leo", "degree_in_sign": 23.456, "house": 1, "nakshatra": "Magha", "lord": "Ketu"},
+    "planets": [
+      {"name":"Sun","longitude":23.456,"sign":"Leo","degree_in_sign":23.456,"house":1,"retrograde":false,"combust":false,"nakshatra":"Magha","nakshatra_lord":"Ketu"},
+      {"name":"Moon","longitude":100.123,"sign":"Sagittarius","degree_in_sign":10.123,"house":3,"retrograde":false,"combust":false,"nakshatra":"Purva Ashadha","nakshatra_lord":"Venus"},
+      ...
+    ],
+    "houses": [
+      {"number":1,"sign":"Leo","sign_number":5,"lord":"Sun","planets_in_house":["Sun"],"aspects_received":[]},
+      {"number":2,"sign":"Virgo","sign_number":6,"lord":"Mercury","planets_in_house":["Mars"],"aspects_received":["Sun"]},
+      ...
+    ],
+    "metadata": {"chart_type":"D1","ayanamsha":"Lahiri","ayanamsha_value":24.257,"house_system":"Whole Sign","computed_at":"2026-06-24T18:30:00Z"}
+  }
+}
+Varga JSON Example (D9 Navamsa):
+{
+  "varga": {
+    "division": 9,
+    "ascendant": {"sign":"Scorpio","degree_in_sign":5.678,"lord":"Venus"},
+    "planets": [
+      {"name":"Sun","sign":"Sagittarius","degree_in_sign":15.321,"house":2},
+      ...
+    ],
+    "houses": [ ... ],
+    "metadata": {"chart_type":"D9","ayanamsha":"Lahiri","ayanamsha_value":24.257,"house_system":"Whole Sign"}
+  }
+}
+Dasha JSON Example:
+{
+  "dasha": {
+    "system": "Vimshottari",
+    "birth_nakshatra": "Magha",
+    "timeline": [
+      {"lord":"Saturn","start_jd":2012345.6789,"end_jd":2045321.1234,"years":19,"sub_periods":[
+         {"lord":"Mars","start_jd":2012345.6789,"end_jd":2021345.6789,"years":7,...},
+         ...
+      ]},
+      ...
+    ]
+  }
+}
+Include these JSON schemas in docs; ensure all fields (
+latitude
+,
+ 
+speed
+,
+ 
+dignity
+, etc.) are documented.
+Mermaid Diagrams (Conceptual):
+Architecture Diagram:
+ 
+Depict layers (Astronomy → Chart → Dasha/Yoga/Special → Consensus → API/UI).
+Timeline/Roadmap:
+ 
+Show phases and sprints (e.g., Gantt with milestones).
+––––––––––––––––––––––––––––––––––––––––––––
+Tradition-Sensitive Formulas & Sources
+For each formula, choose a canonical source:
+Upagrahas (e.g. Gulika, Mandi):
+ 
+Typically from
+ 
+Parasara Horā
+ 
+or
+ 
+Parashara Light
+ 
+(James Braha). E.g. Gulika = “Panchami of nighttime”【20†L238-L247】 or Rahu-chart calculation.
+Special Lagnas (Hora, Indu, Ghati):
+ 
+From BPHS or
+ 
+Sarkar’s Hora Shastra
+. State version (e.g. Hora Lagna = Lagna of Sun-chart).
+Graha Yuddha:
+ 
+Classical rule: the planet with higher longitude wins if within 1° (or as per Parashara). Cite BPHS (Ch.16) or Sripati.
+Varga Construction:
+ 
+Standard Vimshottari mapping (e.g. Navamsa = 30°/9° block), as per
+ 
+Vedanga Jyotisha
+.
+Dashas:
+ 
+Vimśottari (BPHS Ch. 10), Yogini (various texts), etc. e.g. BPHS Ch.9 describes Vimśottari nakshatra lengths.
+List authoritative references to “standardize” on (e.g., actual English translations or well-known texts). If multiple traditions conflict, note it (e.g., Lahiri vs Raman ayanāmśas, or different Gulika definitions) and allow configuration.
+––––––––––––––––––––––––––––––––––––––––––––
+Gaps & Uncertainty
+No software can fully capture oral traditions, regional glosses, and unpublished shastras. Known gaps: certain
+ 
+Nadi
+ 
+astrology rules (like rare Saham formulas) are esoteric; some commentators (Kerala vs Bengal tradition) interpret sutras differently. We must
+ 
+flag uncertainty
+ 
+when a rule is controversial. For example, if two texts differ, output: “Classical sources disagree: Source A says X, Source B says Y.”
+Uncomputable aspects (e.g.
+ 
+amana baraha
+ 
+variant) can be omitted or tagged “not implemented”. Where astrology is probabilistic (e.g. marriage could happen 10% early), use ranges/probabilities in output.
+––––––––––––––––––––––––––––––––––––––––––––
+Security, Privacy, Provenance
+User Data:
+ 
+Birth information is PII. If stored, encrypt it. Provide user with option to delete their data.
+Provenance:
+ 
+Tag every prediction with source citations (e.g. “BPHS Ch.5, Sloka 12 says …” or Swiss Ephemeris version) so results are traceable. The knowledge graph edges can record the text origin.
+Reproducibility:
+ 
+Fix Swiss Ephemeris version, time standards (UTC). In results metadata, include ephemeris version and date of calculation to ensure anyone can recompute given same inputs.
+––––––––––––––––––––––––––––––––––––––––––––
+References
+Swiss Ephemeris (AstroDienst) documentation – high-precision ephemeris for astrology【20†L238-L247】.
+Paragon AI Blog on RAG – advantages of knowledge graphs for contextual retrieval【26†L183-L192】【26†L190-L199】.
+(Additional classical texts and software docs to be cited in final documentation.)

@@ -242,11 +242,12 @@ class YogaEngine:
                     return True, {planet1, planet2}
             return False, set()
 
-        # Planet.conjunct(OtherPlanet)
-        match = re.match(r"^([a-zA-Z]+)\.conjunct\(([a-zA-Z]+)\)$", stmt)
+        # Planet.conjunct(OtherPlanet, orb=X) or Planet.conjunct(OtherPlanet)
+        match = re.match(r"^([a-zA-Z]+)\.conjunct\(([a-zA-Z]+)(?:,\s*orb=([0-9.]+))?\)$", stmt)
         if match:
             planet1 = match.group(1)
             target = match.group(2)
+            orb_str = match.group(3)
             p1_data = chart.get_planet(planet1)
             if not p1_data:
                 return False, set()
@@ -256,11 +257,23 @@ class YogaEngine:
                 for b_name in NATURAL_BENEFICS:
                     b_data = chart.get_planet(b_name.value)
                     if b_data and b_data.house == p1_data.house and b_data.name != planet1:
-                        return True, {planet1, b_data.name}
+                        if orb_str:
+                            orb_limit = float(orb_str)
+                            actual_orb = abs(p1_data.degree_in_sign - b_data.degree_in_sign)
+                            if actual_orb <= orb_limit:
+                                return True, {planet1, b_data.name}
+                        else:
+                            return True, {planet1, b_data.name}
             else:
                 p2_data = chart.get_planet(target)
                 if p2_data and p1_data.house == p2_data.house:
-                    return True, {planet1, target}
+                    if orb_str:
+                        orb_limit = float(orb_str)
+                        actual_orb = abs(p1_data.degree_in_sign - p2_data.degree_in_sign)
+                        if actual_orb <= orb_limit:
+                            return True, {planet1, target}
+                    else:
+                        return True, {planet1, target}
             return False, set()
             
         # Planet.aspects(OtherPlanet)
@@ -365,5 +378,4 @@ class YogaEngine:
             return False, set()
 
         # Fallback for unrecognized syntax
-        print(f"Warning: Unrecognized DSL statement: '{stmt}'")
-        return False, set()
+        raise ValueError(f"Unrecognized Yoga DSL statement: '{stmt}'")

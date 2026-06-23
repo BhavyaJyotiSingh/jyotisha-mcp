@@ -5,9 +5,9 @@ Computes the six-fold strength (Shadbala) of the traditional planets:
 1. Sthana Bala (Positional Strength)
 2. Dig Bala (Directional Strength)
 3. Kala Bala (Temporal Strength)
-4. Cheshta Bala (Motional Strength)
-5. Naisargika Bala (Natural Strength)
-6. Drik Bala (Aspectual Strength)
+4. Cheshta Bala (Motile/Ayana)
+5. Naisargika Bala (Natural)
+6. Drik Bala (Aspectual)
 """
 
 from __future__ import annotations
@@ -253,9 +253,19 @@ class PlanetaryStrengthEngine:
         return natonnata + paksha_bala + tribhaga_bala
 
     def _compute_cheshta_bala(self, planet: PlanetPosition) -> float:
-        """Cheshta Bala calculation."""
+        """Cheshta Bala calculation including Ayana Bala for luminaries."""
         if planet.retrograde:
             return 60.0
+            
+        if planet.name in ["Sun", "Moon"]:
+            import math
+            # Ayana Bala approximation: using Sayana longitude
+            sayana_long = (planet.longitude + 24.0) % 360.0
+            is_north = sayana_long < 180.0
+            if planet.name == "Sun":
+                return 60.0 if is_north else 0.0
+            elif planet.name == "Moon":
+                return 60.0 if not is_north else 0.0
             
         avg_speed = {
             "Sun": 0.98,

@@ -7,6 +7,7 @@ Implements Jaimini Sutras analysis, including:
 - Arudha Padas
 """
 
+from typing import Optional
 from jyotisha.models.schemas import Chart, ArudhaPada, SchoolResult
 from jyotisha.constants import Planet, Modality, SIGN_MODALITIES, SIGN_NAMES
 from jyotisha.engines.arudha import ArudhaEngine
@@ -36,7 +37,7 @@ class JaiminiModule:
             "sources_used": self.sources
         }
 
-    def predict(self, chart: Chart, question: str) -> SchoolResult:
+    def predict(self, chart: Chart, question: str, target_date: Optional[str] = None) -> SchoolResult:
         """
         Generate a prediction based on Jaimini principles.
         """
@@ -44,15 +45,45 @@ class JaiminiModule:
         
         if question.lower() == "marriage":
             dk = karakas.get("Darakaraka (DK) - Spouse/Partnership")
-            if dk:
+            arudha_engine = ArudhaEngine()
+            arudhas = arudha_engine.compute_arudhas(chart)
+            ul = next((a for a in arudhas if a.house == 12), None)
+            
+            if dk and ul:
+                confidence = 0.0
+                rules = []
+                
+                # We could add transit checks here if target_date is given
+                if target_date:
+                    from jyotisha.engines.transit import TransitEngine
+                    transit_engine = TransitEngine()
+                    transits = transit_engine.compute_transits(chart, target_date)
+                    
+                    # Check if Jupiter or DK transits UL or 7th from UL
+                    jupiter_transit = next((t for t in transits.transit_planets if t.name == "Jupiter"), None)
+                    dk_transit = next((t for t in transits.transit_planets if t.name == dk['planet']), None)
+                    
+                    ul_sign = ul.sign_number
+                    ul_7th = (ul_sign + 6) % 12
+                    
+                    if jupiter_transit and jupiter_transit.sign_number in [ul_sign, ul_7th]:
+                        confidence += 0.5
+                        rules.append("Transiting Jupiter connects with Upapada Lagna.")
+                    if dk_transit and dk_transit.sign_number in [ul_sign, ul_7th]:
+                        confidence += 0.5
+                        rules.append("Transiting Darakaraka connects with Upapada Lagna.")
+                
+                confidence = min(1.0, confidence)
+                answer = "Favorable transit for marriage." if confidence > 0.0 else "No strong Jaimini transit indication."
+                
                 return SchoolResult(
                     school=self.school_name,
-                    answer="Marriage indicators rely on Darakaraka.",
-                    confidence=0.6,
+                    answer=answer,
+                    confidence=confidence,
                     sources=self.sources,
-                    reasoning=f"Darakaraka is {dk['planet']} in {dk['sign']}.",
-                    rules_fired=["Darakaraka Analysis"],
-                    structured_data={"darakaraka": dk['planet'], "dk_sign": dk['sign']}
+                    reasoning=f"Darakaraka is {dk['planet']}. Upapada Lagna is {ul.sign}. Confidence based on transits over UL.",
+                    rules_fired=rules,
+                    structured_data={"darakaraka": dk['planet'], "dk_sign": dk['sign'], "ul_sign": ul.sign}
                 )
                 
         return SchoolResult(

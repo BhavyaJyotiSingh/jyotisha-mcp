@@ -45,20 +45,60 @@ class KPModule:
         planet_subs = self._compute_all_sub_lords(chart)
         
         if question.lower() == "marriage":
-            # For marriage, in KP we check the 7th Cusp Sub-lord. 
-            # Since we don't have exact Placidus cusps fully exposed yet, 
-            # we look at Venus and the 7th house lord as proxies.
+            # 7th Cusp Sub-Lord (using 7th lord proxy if exact cusp subs aren't available)
             lord_7 = chart.get_house_lord(7)
-            sub_7 = planet_subs.get(lord_7)
-            if sub_7:
+            sub_7_info = planet_subs.get(lord_7)
+            
+            if sub_7_info:
+                sub_lord_planet = sub_7_info['sub_lord'].value
+                
+                # In KP, the sub lord gives results of its Star Lord
+                sl_star_info = planet_subs.get(sub_lord_planet)
+                
+                confidence = 0.0
+                rules = []
+                significators = []
+                star_of_sub = "Unknown"
+                
+                if sl_star_info:
+                    star_of_sub = sl_star_info['star_lord'].value
+                    star_planet_obj = chart.get_planet(star_of_sub)
+                    
+                    if star_planet_obj:
+                        house_placed = star_planet_obj.house
+                        houses_owned = []
+                        for h in chart.houses:
+                            if h.lord == star_of_sub:
+                                houses_owned.append(h.number)
+                                
+                        signified_houses = [house_placed] + houses_owned
+                        
+                        # 2, 7, 11 are houses for marriage
+                        matches = [h for h in signified_houses if h in [2, 7, 11]]
+                        
+                        if 7 in matches:
+                            confidence += 0.5
+                            rules.append(f"Star Lord of Sub Lord ({star_of_sub}) signifies 7th house.")
+                        if 2 in matches:
+                            confidence += 0.2
+                            rules.append(f"Star Lord of Sub Lord ({star_of_sub}) signifies 2nd house.")
+                        if 11 in matches:
+                            confidence += 0.2
+                            rules.append(f"Star Lord of Sub Lord ({star_of_sub}) signifies 11th house.")
+                            
+                        significators = matches
+                        
+                confidence = min(1.0, confidence)
+                answer = "Strong KP promise for marriage." if confidence >= 0.5 else "Weak or no KP promise for marriage."
+                
                 return SchoolResult(
                     school=self.school_name,
-                    answer="Marriage indicators rely on 7th cusp sub-lord significations.",
-                    confidence=0.7,
+                    answer=answer,
+                    confidence=round(confidence, 2),
                     sources=self.sources,
-                    reasoning=f"7th Lord {lord_7} has Sub Lord {sub_7['sub_lord']}. Check if it signifies 2, 7, 11.",
-                    rules_fired=["Cuspal Sub Lord Analysis"],
-                    structured_data={"cusp_7_lord": lord_7, "cusp_7_sub_lord": sub_7['sub_lord']}
+                    reasoning=f"7th Lord ({lord_7}) Sub-Lord is {sub_lord_planet}. Its Star Lord ({star_of_sub}) signifies houses {significators}.",
+                    rules_fired=rules,
+                    structured_data={"cusp_7_lord": lord_7, "sub_lord": sub_lord_planet, "star_of_sub": star_of_sub, "signified": significators}
                 )
                 
         return SchoolResult(
