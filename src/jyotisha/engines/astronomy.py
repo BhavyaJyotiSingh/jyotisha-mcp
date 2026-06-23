@@ -56,7 +56,11 @@ class AstronomicalEngine:
         self.topocentric = topocentric
 
         if ephe_path:
-            swe.set_ephe_path(ephe_path)
+            try:
+                swe.set_ephe_path(ephe_path)
+            except Exception as e:
+                import warnings
+                warnings.warn(f"Failed to set ephemeris path '{ephe_path}': {e}. Using built-in ephemeris.")
 
     # ─────────────────────────────────────────────────────────
     # Core Position Computation

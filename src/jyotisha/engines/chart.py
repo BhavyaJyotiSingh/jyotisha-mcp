@@ -42,10 +42,11 @@ def is_pushkara_navamsa(sign_number: int, degree_in_sign: float) -> bool:
 
 def compute_graha_yuddhas(planets_data: dict[str, dict]) -> dict[str, str]:
     """
-    Computes Graha Yuddha (planetary war) between Mars, Mercury, Jupiter, Venus, Saturn.
+    Computes Graha Yuddha (planetary war).
     Returns a dict mapping planet name to its war status.
     """
-    warring = ["Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
+    from jyotisha.constants import Planet
+    warring = [Planet.SUN.value, Planet.MOON.value, Planet.MARS.value, Planet.MERCURY.value, Planet.JUPITER.value, Planet.VENUS.value, Planet.SATURN.value, Planet.RAHU.value, Planet.KETU.value]
     results = {}
     
     # Compare all pairs
@@ -277,6 +278,8 @@ class ChartEngine:
 
         # Compute new lagna sign
         asc_varga_sign = compute_sign(base_chart.ascendant.longitude)
+        varga_asc_degree = self._compute_varga_degree(base_chart.ascendant.longitude, division)
+        varga_asc_longitude = (asc_varga_sign * 30.0) + varga_asc_degree
 
         # Compute planet positions in the varga
         varga_planets = []
@@ -284,9 +287,8 @@ class ChartEngine:
             new_sign = compute_sign(planet.longitude)
             house_num = ((new_sign - asc_varga_sign) % 12) + 1
             
-            # Vargas mathematically represent sub-divisions. We set them to the center of the sign
-            # to prevent downstream code from misinterpreting D1 degrees as varga coordinates.
-            varga_degree = 15.0
+            # Vargas mathematically represent sub-divisions. We compute their exact fractional projection.
+            varga_degree = self._compute_varga_degree(planet.longitude, division)
             varga_longitude = (new_sign * 30.0) + varga_degree
             dignity = compute_dignity(planet.name, new_sign, varga_degree)
 
@@ -335,7 +337,7 @@ class ChartEngine:
                 longitude=varga_asc_longitude,
                 sign=SIGN_NAMES[asc_varga_sign],
                 sign_number=asc_varga_sign,
-                degree_in_sign=15.0,
+                degree_in_sign=varga_asc_degree,
                 nakshatra=base_chart.ascendant.nakshatra,
                 nakshatra_number=base_chart.ascendant.nakshatra_number,
                 pada=base_chart.ascendant.pada,
@@ -384,6 +386,29 @@ class ChartEngine:
     # ─────────────────────────────────────────────────────────
 
     @staticmethod
+    def _compute_varga_degree(longitude: float, division: int) -> float:
+        """Calculate the exact degree of a planet mapped mathematically into the Varga sign."""
+        if division == 30:
+            deg = longitude % 30.0
+            sign = int(longitude // 30.0)
+            if sign % 2 == 0:
+                segments = [(0.0, 5.0), (5.0, 10.0), (10.0, 18.0), (18.0, 25.0), (25.0, 30.0)]
+            else:
+                segments = [(0.0, 5.0), (5.0, 12.0), (12.0, 20.0), (20.0, 25.0), (25.0, 30.0)]
+                
+            fraction = 0.5
+            for start_deg, end_deg in segments:
+                if deg <= end_deg or end_deg == 30.0:
+                    slice_size = end_deg - start_deg
+                    fraction = (deg - start_deg) / slice_size
+                    break
+        else:
+            slice_size = 30.0 / division
+            fraction = (longitude % slice_size) / slice_size
+            
+        return fraction * 30.0
+
+    @staticmethod
     def _compute_navamsa_sign(longitude: float) -> int:
         """D9 Navamsa: divide each sign into 9 parts of 3°20'."""
         sign = int(longitude // 30)
@@ -419,8 +444,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 7.5)
-        if part > 3:
-            part = 3
         return (sign + part * 3) % 12
 
     @staticmethod
@@ -429,8 +452,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 6.0)
-        if part > 4:
-            part = 4
 
         # Odd signs (Mesha, Mithuna, Simha, Tula, Dhanu, Kumbha)
         odd_map = [Sign.ARIES.value, Sign.AQUARIUS.value, Sign.SAGITTARIUS.value, Sign.GEMINI.value, Sign.LIBRA.value]
@@ -448,8 +469,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 5.0)
-        if part > 5:
-            part = 5
 
         # Odd signs start from Aries, Even signs start from Libra
         start = Sign.ARIES.value if sign % 2 == 0 else Sign.LIBRA.value
@@ -461,8 +480,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / (30.0 / 7))
-        if part > 6:
-            part = 6
         if sign % 2 == 0:  # Odd sign
             return (sign + part) % 12
         else:
@@ -474,8 +491,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 3.75)
-        if part > 7:
-            part = 7
 
         modality = sign % 3  # 0 = Movable, 1 = Fixed, 2 = Dual
         if modality == 0:
@@ -492,8 +507,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 3.0)
-        if part > 9:
-            part = 9
         if sign % 2 == 0:
             return (sign + part) % 12
         else:
@@ -504,8 +517,6 @@ class ChartEngine:
         """D11 Rudramsa: 11 parts of 2°43'38\" each."""
         deg = longitude % 30
         part = int(deg / (30.0 / 11.0))
-        if part > 10:
-            part = 10
         # Starts from Aries for all signs
         return part % 12
 
@@ -515,8 +526,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 2.5)
-        if part > 11:
-            part = 11
         return (sign + part) % 12
 
     @staticmethod
@@ -525,8 +534,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / (30.0 / 16))
-        if part > 15:
-            part = 15
         modality = sign % 3
         starts = [0, 4, 8]
         return (starts[modality] + part) % 12
@@ -537,8 +544,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / (30.0 / 20))
-        if part > 19:
-            part = 19
         modality = sign % 3
         starts = [0, 8, 4]
         return (starts[modality] + part) % 12
@@ -549,8 +554,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / (30.0 / 24))
-        if part > 23:
-            part = 23
         if sign % 2 == 0:
             return (Sign.LEO.value + part) % 12
         else:
@@ -562,8 +565,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / (30.0 / 27))
-        if part > 26:
-            part = 26
         element = sign % 4
         starts = [0, 3, 6, 9]
         return (starts[element] + part) % 12
@@ -604,8 +605,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 0.75)
-        if part > 39:
-            part = 39
 
         start = Sign.ARIES.value if sign % 2 == 0 else Sign.LIBRA.value
         return (start + part) % 12
@@ -616,8 +615,6 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / (30.0 / 45.0))
-        if part > 44:
-            part = 44
 
         modality = sign % 3  # Movable, Fixed, Dual
         starts = [Sign.ARIES.value, Sign.LEO.value, Sign.SAGITTARIUS.value]
@@ -629,6 +626,4 @@ class ChartEngine:
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 0.5)
-        if part > 59:
-            part = 59
         return (sign + part) % 12

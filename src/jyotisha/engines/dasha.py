@@ -49,6 +49,8 @@ class DashaEngine:
         degree_in_nakshatra = moon_longitude % NAKSHATRA_SPAN
 
         # Starting lord (from nakshatra lord cycle)
+        # Note: VIMSHOTTARI_ORDER starts with Ketu at index 0 (Ashwini).
+        # E.g., Revati is index 26. 26 % 9 = 8 (Mercury), which is correct.
         lord_index = nakshatra_num % 9
         starting_lord = VIMSHOTTARI_ORDER[lord_index]
 
@@ -143,7 +145,10 @@ class DashaEngine:
             raise ValueError("Chart has no birth event data")
             
         asc_sign_num = chart.ascendant.sign_number
-        is_odd = asc_sign_num % 2 == 0  # 0 is Aries (1st sign -> odd)
+        # Note: 0 is Aries, so 0 % 2 == 0 evaluates to True.
+        # This correctly designates Aries as an Odd sign in Jyotish.
+        # 1 is Taurus (False -> Even).
+        is_odd = asc_sign_num % 2 == 0
         
         sequence = []
         for i in range(12):
