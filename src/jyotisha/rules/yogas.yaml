@@ -1,0 +1,168 @@
+yogas:
+  # ─────────────────────────────────────────────────────────
+  # Pancha Mahapurusha Yogas (The 5 Great Person Yogas)
+  # ─────────────────────────────────────────────────────────
+  - name: "Ruchaka Yoga"
+    category: "pancha_mahapurusha"
+    conditions:
+      - "Mars.inOwnSign() OR Mars.inExaltation()"
+      - "Mars.inKendra()"
+    conclusion: "Ruchaka Yoga is present."
+    effects:
+      - "Courageous, leader, victorious, wealth through land/martial pursuits"
+    intensity: "high"
+    sources: ["BPHS 75.1-5", "Phaladeepika 6.1"]
+
+  - name: "Bhadra Yoga"
+    category: "pancha_mahapurusha"
+    conditions:
+      - "Mercury.inOwnSign() OR Mercury.inExaltation()"
+      - "Mercury.inKendra()"
+    conclusion: "Bhadra Yoga is present."
+    effects:
+      - "Highly intelligent, good communicator, wealthy, long-lived"
+    intensity: "high"
+    sources: ["BPHS 75.1-5"]
+
+  - name: "Hamsa Yoga"
+    category: "pancha_mahapurusha"
+    conditions:
+      - "Jupiter.inOwnSign() OR Jupiter.inExaltation()"
+      - "Jupiter.inKendra()"
+    conclusion: "Hamsa Yoga is present."
+    effects:
+      - "Virtuous, spiritual wisdom, respected, comfortable life"
+    intensity: "high"
+    sources: ["BPHS 75.1-5"]
+
+  - name: "Malavya Yoga"
+    category: "pancha_mahapurusha"
+    conditions:
+      - "Venus.inOwnSign() OR Venus.inExaltation()"
+      - "Venus.inKendra()"
+    conclusion: "Malavya Yoga is present."
+    effects:
+      - "Beautiful, luxurious life, artistic, happy marriage"
+    intensity: "high"
+    sources: ["BPHS 75.1-5"]
+
+  - name: "Shasha Yoga"
+    category: "pancha_mahapurusha"
+    conditions:
+      - "Saturn.inOwnSign() OR Saturn.inExaltation()"
+      - "Saturn.inKendra()"
+    conclusion: "Shasha Yoga is present."
+    effects:
+      - "Authority, commands others, disciplined, success in politics/land"
+    intensity: "high"
+    sources: ["BPHS 75.1-5"]
+
+  # ─────────────────────────────────────────────────────────
+  # Lunar Yogas
+  # ─────────────────────────────────────────────────────────
+  - name: "Gajakesari Yoga"
+    category: "raja"
+    conditions:
+      - "Jupiter.inKendraFrom(Moon)"
+    conclusion: "Gajakesari Yoga is present."
+    effects:
+      - "Fame, wisdom, powerful speaker, wealth, lasting reputation"
+    intensity: "very_high"
+    sources: ["BPHS 37.1", "Phaladeepika 6.14"]
+    cancellation_conditions:
+      - "Jupiter.combust"
+      - "Jupiter.debilitated"
+
+  - name: "Sunapha Yoga"
+    category: "dhana"
+    conditions:
+      - "Moon.house(2).hasPlanetExcluding(Sun, Rahu, Ketu)"
+    conclusion: "Sunapha Yoga is present."
+    effects:
+      - "Self-acquired wealth, intelligence, good status"
+    intensity: "medium"
+    sources: ["BPHS 37.2-4"]
+
+  - name: "Anapha Yoga"
+    category: "dhana"
+    conditions:
+      - "Moon.house(12).hasPlanetExcluding(Sun, Rahu, Ketu)"
+    conclusion: "Anapha Yoga is present."
+    effects:
+      - "Healthy, well-mannered, renown, quiet enjoyment of life"
+    intensity: "medium"
+    sources: ["BPHS 37.2-4"]
+
+  - name: "Kemadruma Yoga"
+    category: "dosha"
+    conditions:
+      - "Moon.house(2).emptyExcluding(Sun, Rahu, Ketu)"
+      - "Moon.house(12).emptyExcluding(Sun, Rahu, Ketu)"
+    conclusion: "Kemadruma Yoga is present (isolation/hardship)."
+    effects:
+      - "Mental distress, poverty, feeling unsupported"
+    intensity: "high"
+    sources: ["BPHS 37.25"]
+    cancellation_conditions:
+      - "Moon.inKendra()"
+      - "Jupiter.aspects(Moon)"
+      - "Moon.conjunct(Benefic)"
+
+  # ─────────────────────────────────────────────────────────
+  # Solar Yogas
+  # ─────────────────────────────────────────────────────────
+  - name: "Vesi Yoga"
+    category: "dhana"
+    conditions:
+      - "Sun.house(2).hasPlanetExcluding(Moon, Rahu, Ketu)"
+    conclusion: "Vesi Yoga is present."
+    effects:
+      - "Truthful, aristocratic, wealthy"
+    intensity: "medium"
+    sources: ["BPHS 37.31"]
+
+  - name: "Vasi Yoga"
+    category: "dhana"
+    conditions:
+      - "Sun.house(12).hasPlanetExcluding(Moon, Rahu, Ketu)"
+    conclusion: "Vasi Yoga is present."
+    effects:
+      - "Skillful, charitable, good speech"
+    intensity: "medium"
+    sources: ["BPHS 37.31"]
+
+  # ─────────────────────────────────────────────────────────
+  # Specific Wealth / Misfortune Yogas
+  # ─────────────────────────────────────────────────────────
+  - name: "Chandra-Mangala Yoga"
+    category: "dhana"
+    conditions:
+      - "Mars.conjunct(Moon)"
+    conclusion: "Chandra-Mangala Yoga is present."
+    effects:
+      - "Wealth through enterprise, assertive, sometimes harsh speech"
+    intensity: "medium"
+    sources: ["BPHS 37.8"]
+
+  - name: "Viparita Raja Yoga (Harsha)"
+    category: "raja"
+    conditions:
+      - "House(6).lord.inHouse(6) OR House(6).lord.inHouse(8) OR House(6).lord.inHouse(12)"
+    conclusion: "Viparita Raja Yoga (Harsha) is present."
+    effects:
+      - "Victory over enemies, sudden gains through crisis"
+    intensity: "high"
+    sources: ["BPHS 40.14"]
+
+  - name: "Neechabhanga Raja Yoga"
+    category: "raja"
+    conditions:
+      - type: "composite"
+        any_of:
+          - "DebilitatedPlanet.dispositor.inKendra()"
+          - "DebilitatedPlanet.dispositor.exalted()"
+    conclusion: "Neechabhanga Raja Yoga is present."
+    effects:
+      - "Initial struggle followed by massive success and elevation"
+    intensity: "very_high"
+    sources: ["BPHS 40.7-12"]

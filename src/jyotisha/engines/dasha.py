@@ -1,0 +1,281 @@
+"""
+Dasha Engine — Layer F
+
+Computes Mahadasha and sub-period timelines for various dasha systems.
+Currently implements Vimshottari Dasha (primary system).
+"""
+
+from __future__ import annotations
+
+from jyotisha.constants import (
+    NAKSHATRA_SPAN, VIMSHOTTARI_YEARS, VIMSHOTTARI_ORDER, VIMSHOTTARI_TOTAL_YEARS,
+    Planet,
+)
+from jyotisha.models.schemas import DashaPeriod, DashaTimeline, Chart
+
+
+class DashaEngine:
+    """
+    Computes dasha (planetary period) timelines.
+
+    Supports:
+    - Vimshottari Dasha (120-year cycle based on Moon's nakshatra)
+    - Sub-periods: Antardasha, Pratyantardasha
+    """
+
+    DAYS_PER_YEAR = 365.25
+
+    def compute_vimshottari(
+        self,
+        moon_longitude: float,
+        birth_jd: float,
+        levels: int = 2,
+    ) -> DashaTimeline:
+        """
+        Compute Vimshottari Dasha timeline.
+
+        Args:
+            moon_longitude: Moon's sidereal longitude (0-360)
+            birth_jd: Julian Day of birth
+            levels: Depth of sub-periods (1=Maha only, 2=+Antar, 3=+Pratyantara)
+
+        Returns:
+            Complete DashaTimeline with periods and sub-periods.
+        """
+        # Determine Moon's nakshatra
+        nakshatra_num = int(moon_longitude / NAKSHATRA_SPAN)
+        if nakshatra_num >= 27:
+            nakshatra_num = 26
+        degree_in_nakshatra = moon_longitude % NAKSHATRA_SPAN
+
+        # Starting lord (from nakshatra lord cycle)
+        lord_index = nakshatra_num % 9
+        starting_lord = VIMSHOTTARI_ORDER[lord_index]
+
+        # Balance at birth: proportion of the first dasha remaining
+        proportion_elapsed = degree_in_nakshatra / NAKSHATRA_SPAN
+        first_lord_years = VIMSHOTTARI_YEARS[starting_lord]
+        balance_years = first_lord_years * (1.0 - proportion_elapsed)
+
+        # Build timeline
+        timeline = []
+        current_jd = birth_jd
+
+        # Generate enough dashas to cover ~120+ years
+        for cycle_offset in range(18):  # 18 dashas covers 2 full cycles
+            idx = (lord_index + cycle_offset) % 9
+            lord = VIMSHOTTARI_ORDER[idx]
+            total_years = VIMSHOTTARI_YEARS[lord]
+
+            if cycle_offset == 0:
+                years = balance_years
+                is_balance = True
+            else:
+                years = float(total_years)
+                is_balance = False
+
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+
+            # Compute sub-periods if requested
+            sub_periods = []
+            if levels >= 2:
+                sub_periods = self._compute_sub_periods(
+                    lord, years, current_jd, level=2, max_level=levels
+                )
+
+            period = DashaPeriod(
+                lord=lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                years=round(years, 4),
+                is_balance=is_balance,
+                sub_periods=sub_periods,
+            )
+            timeline.append(period)
+            current_jd = end_jd
+
+        from jyotisha.constants import NAKSHATRA_NAMES
+        return DashaTimeline(
+            system="Vimshottari",
+            birth_nakshatra=NAKSHATRA_NAMES[nakshatra_num],
+            birth_nakshatra_lord=starting_lord,
+            balance_at_birth={
+                "lord": starting_lord,
+                "remaining_years": round(balance_years, 4),
+                "total_years": first_lord_years,
+                "elapsed_fraction": round(proportion_elapsed, 4),
+            },
+            timeline=timeline,
+        )
+
+    def compute_vimshottari_from_chart(
+        self,
+        chart: Chart,
+        levels: int = 2,
+    ) -> DashaTimeline:
+        """Convenience method to compute Vimshottari from a Chart object."""
+        moon = chart.get_planet("Moon")
+        if moon is None:
+            raise ValueError("Moon position not found in chart")
+
+        if chart.birth_event is None:
+            raise ValueError("Chart has no birth event data")
+
+        return self.compute_vimshottari(
+            moon_longitude=moon.longitude,
+            birth_jd=chart.birth_event.julian_day,
+            levels=levels,
+        )
+
+    def get_current_dasha(
+        self,
+        dasha_timeline: DashaTimeline,
+        query_jd: float,
+    ) -> dict:
+        """
+        Find the active dasha at a given Julian Day.
+
+        Returns dict with current Mahadasha, Antardasha, etc.
+        """
+        result = {}
+
+        for period in dasha_timeline.timeline:
+            start_jd = self._date_to_jd(period.start_date)
+            end_jd = self._date_to_jd(period.end_date)
+
+            if start_jd <= query_jd < end_jd:
+                result["mahadasha"] = {
+                    "lord": period.lord,
+                    "start": period.start_date,
+                    "end": period.end_date,
+                    "years": period.years,
+                }
+
+                # Check sub-periods
+                for sub in period.sub_periods:
+                    sub_start = self._date_to_jd(sub.start_date)
+                    sub_end = self._date_to_jd(sub.end_date)
+
+                    if sub_start <= query_jd < sub_end:
+                        result["antardasha"] = {
+                            "lord": sub.lord,
+                            "start": sub.start_date,
+                            "end": sub.end_date,
+                            "years": sub.years,
+                        }
+
+                        for subsub in sub.sub_periods:
+                            ss_start = self._date_to_jd(subsub.start_date)
+                            ss_end = self._date_to_jd(subsub.end_date)
+                            if ss_start <= query_jd < ss_end:
+                                result["pratyantardasha"] = {
+                                    "lord": subsub.lord,
+                                    "start": subsub.start_date,
+                                    "end": subsub.end_date,
+                                    "years": subsub.years,
+                                }
+                                break
+                        break
+                break
+
+        return result
+
+    # ─────────────────────────────────────────────────────────
+    # Sub-period computation
+    # ─────────────────────────────────────────────────────────
+
+    def _compute_sub_periods(
+        self,
+        parent_lord: Planet,
+        parent_years: float,
+        start_jd: float,
+        level: int = 2,
+        max_level: int = 2,
+    ) -> list[DashaPeriod]:
+        """
+        Compute sub-periods within a dasha period.
+
+        Sub-periods cycle through the Vimshottari order starting from
+        the parent period's lord.
+        """
+        parent_idx = VIMSHOTTARI_ORDER.index(parent_lord)
+        sub_periods = []
+        current_jd = start_jd
+
+        for i in range(9):
+            sub_lord = VIMSHOTTARI_ORDER[(parent_idx + i) % 9]
+            sub_lord_years = VIMSHOTTARI_YEARS[sub_lord]
+
+            # Sub-period proportion = (sub_lord_years * parent_years) / total_years
+            sub_years = (sub_lord_years * parent_years) / VIMSHOTTARI_TOTAL_YEARS
+            sub_days = sub_years * self.DAYS_PER_YEAR
+            end_jd = current_jd + sub_days
+
+            # Recurse for deeper levels
+            deeper_subs = []
+            if level < max_level:
+                deeper_subs = self._compute_sub_periods(
+                    sub_lord, sub_years, current_jd,
+                    level=level + 1, max_level=max_level,
+                )
+
+            sub_periods.append(DashaPeriod(
+                lord=sub_lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                years=round(sub_years, 4),
+                sub_periods=deeper_subs,
+            ))
+            current_jd = end_jd
+
+        return sub_periods
+
+    # ─────────────────────────────────────────────────────────
+    # Date helpers
+    # ─────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _jd_to_date(jd: float) -> str:
+        """Convert Julian Day to ISO date string."""
+        try:
+            import swisseph as swe
+            year, month, day, hour = swe.revjul(jd)
+            return f"{year:04d}-{month:02d}-{day:02d}"
+        except ImportError:
+            # Fallback: manual conversion
+            z = int(jd + 0.5)
+            if z < 2299161:
+                a = z
+            else:
+                alpha = int((z - 1867216.25) / 36524.25)
+                a = z + 1 + alpha - int(alpha / 4)
+            b = a + 1524
+            c = int((b - 122.1) / 365.25)
+            d = int(365.25 * c)
+            e = int((b - d) / 30.6001)
+
+            day = b - d - int(30.6001 * e)
+            month = e - 1 if e < 14 else e - 13
+            year = c - 4716 if month > 2 else c - 4715
+
+            return f"{year:04d}-{month:02d}-{day:02d}"
+
+    @staticmethod
+    def _date_to_jd(date_str: str) -> float:
+        """Convert ISO date string to Julian Day."""
+        try:
+            import swisseph as swe
+            parts = date_str.split("-")
+            year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
+            return swe.julday(year, month, day, 0.0)
+        except (ImportError, Exception):
+            # Fallback
+            parts = date_str.split("-")
+            y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
+            if m <= 2:
+                y -= 1
+                m += 12
+            A = int(y / 100)
+            B = 2 - A + int(A / 4)
+            return int(365.25 * (y + 4716)) + int(30.6001 * (m + 1)) + d + B - 1524.5
