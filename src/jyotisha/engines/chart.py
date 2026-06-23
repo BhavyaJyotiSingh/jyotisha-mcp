@@ -60,8 +60,10 @@ def compute_graha_yuddhas(planets_data: dict[str, dict]) -> dict[str, str]:
                 diff = min(diff, 360.0 - diff)
                 
                 if diff <= 1.0:
-                    # Winner is the one with lower longitude (standard classical rule)
-                    if lon1 < lon2:
+                    # Winner is the one with higher (more northern) latitude (classical rule)
+                    lat1 = planets_data[p1].get("latitude", 0.0)
+                    lat2 = planets_data[p2].get("latitude", 0.0)
+                    if lat1 > lat2:
                         results[p1] = f"Won against {p2}"
                         results[p2] = f"Lost to {p1}"
                     else:
@@ -281,18 +283,23 @@ class ChartEngine:
         for planet in base_chart.planets:
             new_sign = compute_sign(planet.longitude)
             house_num = ((new_sign - asc_varga_sign) % 12) + 1
-            dignity = compute_dignity(planet.name, new_sign, 15.0)
+            
+            # Vargas mathematically represent sub-divisions. We set them to the center of the sign
+            # to prevent downstream code from misinterpreting D1 degrees as varga coordinates.
+            varga_degree = 15.0
+            varga_longitude = (new_sign * 30.0) + varga_degree
+            dignity = compute_dignity(planet.name, new_sign, varga_degree)
 
             varga_planet = PlanetPosition(
                 name=planet.name,
-                longitude=planet.longitude,
+                longitude=varga_longitude,
                 latitude=planet.latitude,
                 distance=planet.distance,
                 speed=planet.speed,
                 sign=SIGN_NAMES[new_sign],
                 sign_number=new_sign,
                 house=house_num,
-                degree_in_sign=planet.degree_in_sign,
+                degree_in_sign=varga_degree,
                 retrograde=planet.retrograde,
                 combust=planet.combust,
                 planetary_war=planet.planetary_war,
@@ -318,16 +325,17 @@ class ChartEngine:
             chart_type=f"D{division}",
             ayanamsha=base_chart.metadata.ayanamsha,
             ayanamsha_value=base_chart.metadata.ayanamsha_value,
-            house_system=base_chart.metadata.house_system,
+            house_system="Whole Sign", # Vargas fundamentally use sign-based houses
             computed_at=datetime.now(timezone.utc),
         )
 
+        varga_asc_longitude = (asc_varga_sign * 30.0) + 15.0
         return Chart(
             ascendant=Ascendant(
-                longitude=base_chart.ascendant.longitude,
+                longitude=varga_asc_longitude,
                 sign=SIGN_NAMES[asc_varga_sign],
                 sign_number=asc_varga_sign,
-                degree_in_sign=base_chart.ascendant.degree_in_sign,
+                degree_in_sign=15.0,
                 nakshatra=base_chart.ascendant.nakshatra,
                 nakshatra_number=base_chart.ascendant.nakshatra_number,
                 pada=base_chart.ascendant.pada,

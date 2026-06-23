@@ -159,7 +159,7 @@ def get_house_strategy(house_system_code: str) -> HouseSystemStrategy:
     """Factory method to get the correct house strategy."""
     if house_system_code == "W":
         return WholeSignHouseSystem()
-    elif house_system_code in ("E", "B"): # Equal or Bhava Chalit approximation
+    elif house_system_code in ("B", "O"): # Bhava Chalit / Porphyry approximation
         return BhavaChalitHouseSystem()
-    else: # P (Placidus), K (Koch/KP)
+    else: # P (Placidus), K (Koch/KP), E (Equal)
         return CuspHouseSystem()

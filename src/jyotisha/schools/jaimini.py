@@ -51,7 +51,8 @@ class JaiminiModule:
                     confidence=0.6,
                     sources=self.sources,
                     reasoning=f"Darakaraka is {dk['planet']} in {dk['sign']}.",
-                    rules_fired=["Darakaraka Analysis"]
+                    rules_fired=["Darakaraka Analysis"],
+                    structured_data={"darakaraka": dk['planet'], "dk_sign": dk['sign']}
                 )
                 
         return SchoolResult(

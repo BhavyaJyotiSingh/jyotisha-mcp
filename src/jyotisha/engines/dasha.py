@@ -310,8 +310,8 @@ class DashaEngine:
         result = {}
 
         for period in dasha_timeline.timeline:
-            start_jd = self._date_to_jd(period.start_date)
-            end_jd = self._date_to_jd(period.end_date)
+            start_jd = period.start_jd
+            end_jd = period.end_jd
 
             if start_jd <= query_jd < end_jd:
                 result["mahadasha"] = {
@@ -323,8 +323,8 @@ class DashaEngine:
 
                 # Check sub-periods
                 for sub in period.sub_periods:
-                    sub_start = self._date_to_jd(sub.start_date)
-                    sub_end = self._date_to_jd(sub.end_date)
+                    sub_start = sub.start_jd
+                    sub_end = sub.end_jd
 
                     if sub_start <= query_jd < sub_end:
                         result["antardasha"] = {
@@ -335,8 +335,8 @@ class DashaEngine:
                         }
 
                         for subsub in sub.sub_periods:
-                            ss_start = self._date_to_jd(subsub.start_date)
-                            ss_end = self._date_to_jd(subsub.end_date)
+                            ss_start = subsub.start_jd
+                            ss_end = subsub.end_jd
                             if ss_start <= query_jd < ss_end:
                                 result["pratyantardasha"] = {
                                     "lord": subsub.lord,

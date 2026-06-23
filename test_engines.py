@@ -81,6 +81,16 @@ def run_validations():
     print(f"   Success! SAV computed. Total Bindus = {sav_total} (Expected ~337)")
     print(f"   SAV distribution: {av_result.sav}")
 
+    # 4c. Argala Engine
+    from jyotisha.engines.argala import ArgalaEngine
+    print("\n4c. Instantiating Argala Engine...")
+    argala_engine = ArgalaEngine()
+    argala_res = argala_engine.compute_argalas(chart)
+    print(f"   Success! Computed Argala for {len(argala_res)} targets.")
+    house1_argala = argala_res.get("House 1")
+    if house1_argala:
+        print(f"      House 1 Unobstructed Argala: {house1_argala.has_unobstructed_argala}")
+
     # 5. Panchanga Engine
     print("\n5. Instantiating Daily Panchanga Engine...")
     panchanga_engine = PanchangaEngine(astro_engine=chart_engine.astro)

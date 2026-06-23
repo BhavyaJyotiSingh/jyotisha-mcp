@@ -367,6 +367,7 @@ class SchoolResult(BaseModel):
     sources: list[str] = Field(default_factory=list)
     reasoning: str = ""
     rules_fired: list[str] = Field(default_factory=list)
+    structured_data: dict = Field(default_factory=dict)
 
 class ConsensusPrediction(BaseModel):
     """Multi-school consensus prediction."""

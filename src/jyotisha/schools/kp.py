@@ -57,7 +57,8 @@ class KPModule:
                     confidence=0.7,
                     sources=self.sources,
                     reasoning=f"7th Lord {lord_7} has Sub Lord {sub_7['sub_lord']}. Check if it signifies 2, 7, 11.",
-                    rules_fired=["Cuspal Sub Lord Analysis"]
+                    rules_fired=["Cuspal Sub Lord Analysis"],
+                    structured_data={"cusp_7_lord": lord_7, "cusp_7_sub_lord": sub_7['sub_lord']}
                 )
                 
         return SchoolResult(
@@ -153,11 +154,19 @@ class KPModule:
         # Day Lord
         if chart.birth_event and chart.birth_event.datetime_utc:
             try:
-                from datetime import datetime
-                dt = datetime.fromisoformat(chart.birth_event.datetime_utc.replace("Z", "+00:00"))
+                from datetime import timedelta
+                # datetime_utc is a datetime object
+                dt_utc = chart.birth_event.datetime_utc
+                # Adjust to local time using the provided offset
+                local_dt = dt_utc + timedelta(hours=chart.birth_event.utc_offset_hours)
+                
+                weekday = local_dt.weekday()
+                
+                # Vedic day starts at sunrise. If birth is before ~6 AM, it typically falls under the previous day's lord.
+                if local_dt.hour < 6:
+                    weekday = (weekday - 1) % 7
+                    
                 # Monday=0, Sunday=6
-                weekday = dt.weekday()
-                # Vedic weekday sequence: Sun, Mon, Tue, Wed, Thu, Fri, Sat
                 day_lords = [
                     Planet.MOON,    # Mon (0)
                     Planet.MARS,    # Tue (1)

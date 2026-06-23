@@ -69,7 +69,8 @@ class ParasharaModule:
                 confidence=0.5,
                 sources=["BPHS Chapter on Marriage"],
                 reasoning=f"Must check dashas of 7th lord ({lord_7}) and Venus.",
-                rules_fired=[]
+                rules_fired=[],
+                structured_data={"house_7_lord": lord_7, "karaka": "Venus"}
             )
             
         return SchoolResult(

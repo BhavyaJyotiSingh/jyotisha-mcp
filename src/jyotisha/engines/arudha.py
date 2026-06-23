@@ -29,10 +29,31 @@ class ArudhaEngine:
             if not house:
                 continue
                 
-            # For a more advanced Jaimini implementation, this should check 
-            # dual lordships (Scorpio: Mars/Ketu, Aquarius: Saturn/Rahu).
-            # For now, we use the primary house lord.
+            # Advanced Jaimini implementation: check dual lordships 
+            # (Scorpio: Mars/Ketu, Aquarius: Saturn/Rahu).
             lord_planet = chart.get_planet(house.lord)
+            
+            if house.sign_number == 7: # Scorpio
+                p1 = chart.get_planet("Mars")
+                p2 = chart.get_planet("Ketu")
+                if p1 and p2:
+                    if p1.sign_number == 7 and p2.sign_number != 7:
+                        lord_planet = p2
+                    elif p2.sign_number == 7 and p1.sign_number != 7:
+                        lord_planet = p1
+                    else:
+                        lord_planet = p1 if p1.degree_in_sign > p2.degree_in_sign else p2
+            elif house.sign_number == 10: # Aquarius
+                p1 = chart.get_planet("Saturn")
+                p2 = chart.get_planet("Rahu")
+                if p1 and p2:
+                    if p1.sign_number == 10 and p2.sign_number != 10:
+                        lord_planet = p2
+                    elif p2.sign_number == 10 and p1.sign_number != 10:
+                        lord_planet = p1
+                    else:
+                        lord_planet = p1 if p1.degree_in_sign > p2.degree_in_sign else p2
+                        
             if not lord_planet:
                 continue
                 
