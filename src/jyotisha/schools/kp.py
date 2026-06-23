@@ -8,7 +8,7 @@ Implements KP system specific calculations:
 """
 
 
-from jyotisha.models.schemas import Chart
+from jyotisha.models.schemas import Chart, SchoolResult
 from jyotisha.constants import (
     NAKSHATRA_SPAN, NAKSHATRA_LORDS, VIMSHOTTARI_YEARS,
     VIMSHOTTARI_ORDER, VIMSHOTTARI_TOTAL_YEARS, Planet,
@@ -37,6 +37,38 @@ class KPModule:
             "ruling_planets": ruling_planets,
             "sources_used": self.sources
         }
+
+    def predict(self, chart: Chart, question: str) -> SchoolResult:
+        """
+        Generate a prediction based on KP principles.
+        """
+        planet_subs = self._compute_all_sub_lords(chart)
+        
+        if question.lower() == "marriage":
+            # For marriage, in KP we check the 7th Cusp Sub-lord. 
+            # Since we don't have exact Placidus cusps fully exposed yet, 
+            # we look at Venus and the 7th house lord as proxies.
+            lord_7 = chart.get_house_lord(7)
+            sub_7 = planet_subs.get(lord_7)
+            if sub_7:
+                return SchoolResult(
+                    school=self.school_name,
+                    answer="Marriage indicators rely on 7th cusp sub-lord significations.",
+                    confidence=0.7,
+                    sources=self.sources,
+                    reasoning=f"7th Lord {lord_7} has Sub Lord {sub_7['sub_lord']}. Check if it signifies 2, 7, 11.",
+                    rules_fired=["Cuspal Sub Lord Analysis"]
+                )
+                
+        return SchoolResult(
+            school=self.school_name,
+            answer="Prediction not fully supported for this question.",
+            confidence=0.0
+        )
+        
+    def explain(self, result: SchoolResult) -> str:
+        """Explain the school's result."""
+        return f"[KP Explanation]: {result.reasoning}"
 
     def _compute_all_sub_lords(self, chart: Chart) -> dict:
         """Compute the Star Lord (Nakshatra Lord) and Sub Lord for each planet."""

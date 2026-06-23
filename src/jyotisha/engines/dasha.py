@@ -130,6 +130,173 @@ class DashaEngine:
             levels=levels,
         )
 
+    def compute_chara_dasha(self, chart: Chart) -> DashaTimeline:
+        """
+        Compute Jaimini Chara Dasha.
+        Sign-based dasha.
+        Direct sequence for odd signs: Asc, 2nd, 3rd...
+        Reverse sequence for even signs: Asc, 12th, 11th...
+        Duration = Count from sign to its lord (direct/reverse) - 1. 
+        If lord in own sign, 12 years.
+        """
+        if chart.birth_event is None:
+            raise ValueError("Chart has no birth event data")
+            
+        asc_sign_num = chart.ascendant.sign_number
+        is_odd = asc_sign_num % 2 == 0  # 0 is Aries (1st sign -> odd)
+        
+        sequence = []
+        for i in range(12):
+            if is_odd:
+                sequence.append((asc_sign_num + i) % 12)
+            else:
+                sequence.append((asc_sign_num - i) % 12)
+                
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+        
+        from jyotisha.constants import SIGN_NAMES
+        
+        for sign_num in sequence:
+            sign_name = SIGN_NAMES[sign_num]
+            
+            # Find lord
+            from jyotisha.constants import SIGN_LORDS
+            lord_planet_name = SIGN_LORDS.get(sign_num)
+            
+            lord_pos = chart.get_planet(lord_planet_name)
+            
+            if lord_pos is None or lord_pos.sign_number == sign_num:
+                years = 12
+            else:
+                lord_sign_num = lord_pos.sign_number
+                sign_is_odd = sign_num % 2 == 0
+                
+                if sign_is_odd:
+                    # Direct count
+                    count = ((lord_sign_num - sign_num) % 12) + 1
+                else:
+                    # Reverse count
+                    count = ((sign_num - lord_sign_num) % 12) + 1
+                    
+                years = count - 1
+                if years == 0:
+                    years = 12
+                    
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+            
+            period = DashaPeriod(
+                lord=sign_name,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=float(years),
+                is_balance=False,
+                sub_periods=[],
+            )
+            timeline.append(period)
+            current_jd = end_jd
+            
+        return DashaTimeline(
+            system="Chara Dasha",
+            birth_nakshatra=chart.ascendant.sign,  # Not really nakshatra but ascendant sign
+            birth_nakshatra_lord=SIGN_NAMES[asc_sign_num],
+            balance_at_birth={},
+            timeline=timeline
+        )
+
+    def compute_yogini_dasha(self, chart: Chart) -> DashaTimeline:
+        """
+        Compute Yogini Dasha.
+        36-year cycle based on Moon's nakshatra.
+        (Nakshatra + 3) % 8 -> determines starting dasha.
+        """
+        moon = chart.get_planet("Moon")
+        if moon is None or chart.birth_event is None:
+            raise ValueError("Moon or birth event missing")
+            
+        nakshatra_num = moon.nakshatra_number + 1  # 1-indexed (Ashwini=1)
+        
+        yogini_order = [
+            ("Mangala", 1, "Moon"),
+            ("Pingala", 2, "Sun"),
+            ("Dhanya", 3, "Jupiter"),
+            ("Bhramari", 4, "Mars"),
+            ("Bhadrika", 5, "Mercury"),
+            ("Ulka", 6, "Saturn"),
+            ("Siddha", 7, "Venus"),
+            ("Sankata", 8, "Rahu"),
+        ]
+        
+        remainder = (nakshatra_num + 3) % 8
+        if remainder == 0:
+            remainder = 8
+            
+        start_idx = remainder - 1
+        
+        # Balance
+        degree_in_nakshatra = moon.longitude % 13.333333
+        proportion_elapsed = degree_in_nakshatra / 13.333333
+        first_lord_years = yogini_order[start_idx][1]
+        balance_years = first_lord_years * (1.0 - proportion_elapsed)
+        
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+        
+        for cycle_offset in range(16): # roughly 16*4.5 = 72 periods, covers over 100 years
+            idx = (start_idx + cycle_offset) % 8
+            y_name, total_years, lord = yogini_order[idx]
+            
+            if cycle_offset == 0:
+                years = balance_years
+                is_balance = True
+            else:
+                years = float(total_years)
+                is_balance = False
+                
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+            
+            period = DashaPeriod(
+                lord=f"{y_name} ({lord})",
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(years, 4),
+                is_balance=is_balance,
+                sub_periods=[],
+            )
+            timeline.append(period)
+            current_jd = end_jd
+            
+        return DashaTimeline(
+            system="Yogini",
+            birth_nakshatra=moon.nakshatra,
+            birth_nakshatra_lord=yogini_order[start_idx][2],
+            balance_at_birth={
+                "lord": yogini_order[start_idx][0],
+                "remaining_years": round(balance_years, 4),
+            },
+            timeline=timeline
+        )
+
+    def compute_narayana_dasha(self, chart: Chart) -> DashaTimeline:
+        """
+        Compute Narayana Dasha.
+        Advanced Jaimini sign-based dasha.
+        Currently a simplified placeholder (uses Chara Dasha logic as a base).
+        Full implementation requires Chara Bala (sign strength) to determine
+        starting sign (Ascendant vs 7th) and direction.
+        """
+        # For now, fallback to Chara Dasha logic, but label it Narayana
+        # as a placeholder for the advanced implementation.
+        base_chara = self.compute_chara_dasha(chart)
+        base_chara.system = "Narayana (Simplified)"
+        return base_chara
+
     def get_current_dasha(
         self,
         dasha_timeline: DashaTimeline,

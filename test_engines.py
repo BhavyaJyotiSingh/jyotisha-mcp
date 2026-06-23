@@ -5,7 +5,9 @@ from jyotisha.engines.yoga import YogaEngine
 from jyotisha.engines.special import SpecialPointsEngine
 from jyotisha.engines.consensus import ConsensusEngine
 from jyotisha.engines.strength import PlanetaryStrengthEngine
+from jyotisha.engines.ashtakavarga import AshtakavargaEngine
 from jyotisha.engines.panchanga import PanchangaEngine
+from jyotisha.engines.transit import TransitEngine
 from jyotisha.schools.parashara import ParasharaModule
 from jyotisha.schools.jaimini import JaiminiModule
 from jyotisha.schools.kp import KPModule
@@ -43,10 +45,17 @@ def run_validations():
     # 2. Dasha Engine
     print("\n2. Instantiating Dasha Engine...")
     dasha_engine = DashaEngine()
-    
     print("   Computing Vimshottari from Chart...")
-    timeline = dasha_engine.compute_vimshottari_from_chart(chart, levels=2)
-    print(f"   Success! Active Dashas built. First Mahadasha: {timeline.timeline[0].lord}")
+    vimshottari = dasha_engine.compute_vimshottari_from_chart(chart)
+    print(f"   Success! Active Dashas built. First Mahadasha: {vimshottari.timeline[0].lord}")
+    
+    print("   Computing Yogini from Chart...")
+    yogini = dasha_engine.compute_yogini_dasha(chart)
+    print(f"   Success! First Yogini Dasha: {yogini.timeline[0].lord}")
+
+    print("   Computing Chara from Chart...")
+    chara = dasha_engine.compute_chara_dasha(chart)
+    print(f"   Success! First Chara Dasha: {chara.timeline[0].lord} ({chara.timeline[0].years} years)")
     
     # 3. Yoga Engine
     print("\n3. Instantiating Yoga Engine...")
@@ -63,6 +72,14 @@ def run_validations():
     print(f"   Success! Shadbala calculated for {len(strengths)} planets:")
     for name, sb in strengths.items():
         print(f"      - {name}: Total={sb.total_shadbala} Shashtiamsas ({sb.shadbala_rupas} Rupas), Sufficient={sb.is_sufficient}")
+
+    # 4b. Ashtakavarga Engine
+    print("\n4b. Instantiating Ashtakavarga Engine...")
+    av_engine = AshtakavargaEngine()
+    av_result = av_engine.compute_ashtakavarga(chart)
+    sav_total = sum(av_result.sav)
+    print(f"   Success! SAV computed. Total Bindus = {sav_total} (Expected ~337)")
+    print(f"   SAV distribution: {av_result.sav}")
 
     # 5. Panchanga Engine
     print("\n5. Instantiating Daily Panchanga Engine...")
@@ -107,6 +124,23 @@ def run_validations():
     print(f"      Success! Generated {len(upagrahas)} Upagrahas:")
     for u in upagrahas:
         print(f"         - {u.name}: {u.sign} {u.degree}°")
+
+    # 7. Consensus Engine
+    print("\n7. Instantiating Consensus Engine...")
+    consensus = ConsensusEngine()
+    prediction = consensus.generate_consensus(chart, "marriage")
+    print(f"   Success! Consensus Answer: {prediction.consensus_answer} (Confidence: {prediction.consensus_confidence})")
+    print("   Explanations:")
+    print(prediction.explanation)
+
+    # 8. Transit Engine
+    print("\n8. Instantiating Transit Engine...")
+    transit_engine = TransitEngine(astro_engine=chart_engine.astro)
+    transit_res = transit_engine.compute_transits(chart, "2024-01-01")
+    print(f"   Success! Transits computed for 2024-01-01.")
+    print(f"      Jupiter Gochar from Moon: {transit_res.gochara_from_moon.get('Jupiter')}")
+    print(f"      Saturn Gochar from Moon: {transit_res.gochara_from_moon.get('Saturn')}")
+    print(f"      Exact Hits (orb <= 1°): {[h.transit_planet + ' to ' + h.natal_point for h in transit_res.hits if h.is_exact]}")
 
     print("\n--- ALL TESTS PASSED SUCCESSFULLY ---")
 

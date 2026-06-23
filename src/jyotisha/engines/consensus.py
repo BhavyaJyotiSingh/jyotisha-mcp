@@ -38,29 +38,15 @@ class ConsensusEngine:
         school_results = []
         
         # Parashara Result
-        p_res = self.parashara.predict_timing(chart, event_type=question)
+        p_res = self.parashara.predict(chart, question=question)
         school_results.append(p_res)
         
-        # Jaimini Result (Stubbed for now, normally would check Darakaraka for marriage)
-        j_res = SchoolResult(
-            school=self.jaimini.school_name,
-            answer="Jaimini event timing not fully implemented.",
-            confidence=0.0
-        )
-        if question.lower() == "marriage":
-            j_res.answer = "Check Navamsha and Darakaraka dashas."
-            j_res.confidence = 0.4
+        # Jaimini Result
+        j_res = self.jaimini.predict(chart, question=question)
         school_results.append(j_res)
         
-        # KP Result (Stubbed for now, normally would check cuspal sub-lords 2, 7, 11)
-        k_res = SchoolResult(
-            school=self.kp.school_name,
-            answer="KP event timing not fully implemented.",
-            confidence=0.0
-        )
-        if question.lower() == "marriage":
-            k_res.answer = "Check if 7th Cusp Sub-Lord signifies 2, 7, 11."
-            k_res.confidence = 0.8  # KP is highly confident for specific timing
+        # KP Result
+        k_res = self.kp.predict(chart, question=question)
         school_results.append(k_res)
         
         # 2. Calculate weighted consensus

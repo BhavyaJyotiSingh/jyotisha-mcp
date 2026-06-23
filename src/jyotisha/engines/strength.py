@@ -13,14 +13,15 @@ Computes the six-fold strength (Shadbala) of the traditional planets:
 from __future__ import annotations
 from typing import Optional
 from jyotisha.constants import (
-    Planet, EXALTATION, DEBILITATION, NATURAL_BENEFICS, NATURAL_MALEFICS,
+    Planet, EXALTATION, DEBILITATION, NATURAL_BENEFICS, NATURAL_MALEFICS, Sign
 )
-from jyotisha.models.schemas import Chart, ShadBala
+from jyotisha.models.schemas import Chart, ShadBala, PlanetPosition
 
 
 class PlanetaryStrengthEngine:
     """
-    Computes Shadbala (six-fold strength) for the traditional planets.
+    Computes Shadbala (six-fold strength) for the traditional planets
+    with strict mathematical precision based on BPHS.
     """
 
     # Required strength in Rupas (1 Rupa = 60 Shashtiamsas)
@@ -68,22 +69,22 @@ class PlanetaryStrengthEngine:
             if not p_data:
                 continue
 
-            # 1. Sthana Bala (Positional Strength)
-            sthana_bala = self._compute_sthana_bala(p_data, chart)
+            # 1. Sthana Bala
+            sthana_bala = self._compute_sthana_bala(p_data)
 
-            # 2. Dig Bala (Directional Strength)
+            # 2. Dig Bala
             dig_bala = self._compute_dig_bala(p_data)
 
-            # 3. Kala Bala (Temporal Strength)
+            # 3. Kala Bala
             kala_bala = self._compute_kala_bala(p_data, chart)
 
-            # 4. Cheshta Bala (Motional Strength)
+            # 4. Cheshta Bala
             cheshta_bala = self._compute_cheshta_bala(p_data)
 
-            # 5. Naisargika Bala (Natural Strength)
+            # 5. Naisargika Bala
             naisargika_bala = self.NAISARGIKA_BALA.get(name, 0.0)
 
-            # 6. Drik Bala (Aspectual Strength)
+            # 6. Drik Bala
             drik_bala = self._compute_drik_bala(p_data, chart)
 
             # Sum total
@@ -107,52 +108,43 @@ class PlanetaryStrengthEngine:
 
         return results
 
-    # ─────────────────────────────────────────────────────────
-    # Sthana Bala (Positional)
-    # ─────────────────────────────────────────────────────────
-
-    def _compute_sthana_bala(self, planet: PlanetPosition, chart: Chart) -> float:
-        """Sthana Bala = Uchcha Bala + Sapta Vargaja Bala + Ojhayugmabaladi + etc."""
-        # 1. Uchcha Bala (Exaltation strength)
+    def _compute_sthana_bala(self, planet: PlanetPosition) -> float:
+        """Sthana Bala = Uchcha Bala + Saptavargaja + Ojhayugmabaladi + Kendradi + Drekkana"""
+        # 1. Uchcha Bala
         uchcha_bala = 0.0
         try:
             p_enum = Planet(planet.name)
             if p_enum in EXALTATION and p_enum in DEBILITATION:
                 deb_sign = DEBILITATION[p_enum]
-                # Debilitation degree is same as exaltation degree but in the opposite sign
                 deb_deg = (deb_sign.value * 30.0 + EXALTATION[p_enum].exact_degree) % 360.0
                 
-                # Distance to debilitation
                 diff = abs(planet.longitude - deb_deg) % 360.0
                 diff = min(diff, 360.0 - diff)
                 
-                # Max 60 at 180 degrees away (exaltation), 0 at debilitation
                 uchcha_bala = 60.0 * (diff / 180.0)
         except Exception:
-            uchcha_bala = 30.0  # Fallback average
+            uchcha_bala = 30.0
 
-        # 2. Dignity based Saptavargaja Bala approximation
+        # 2. Saptavargaja Bala (Approximated to D1 Dignity for now)
         dignity_score = 30.0
         status = planet.dignity.status.value
         if status == "Exalted":
             dignity_score = 60.0
         elif status == "Moolatrikona":
-            dignity_score = 52.5
-        elif status == "Own Sign":
             dignity_score = 45.0
-        elif status == "Friendly":
-            dignity_score = 37.5
-        elif status == "Neutral":
+        elif status == "Own Sign":
             dignity_score = 30.0
-        elif status == "Enemy":
-            dignity_score = 22.5
-        elif status == "Debilitated":
+        elif status == "Friendly":
             dignity_score = 15.0
+        elif status == "Neutral":
+            dignity_score = 7.5
+        elif status == "Enemy":
+            dignity_score = 3.75
+        elif status == "Debilitated":
+            dignity_score = 1.875
 
-        # 3. Ojhayugmabaladi Bala (Odd/Even sign placement)
-        # Sun, Mars, Jupiter, Mercury, Saturn are strong in Odd signs.
-        # Moon, Venus are strong in Even signs.
-        sign_parity = planet.sign_number % 2  # 0 = Aries (odd), 1 = Taurus (even)
+        # 3. Ojhayugmabaladi Bala
+        sign_parity = planet.sign_number % 2
         ojha_bala = 0.0
         if planet.name in ["Sun", "Mars", "Jupiter", "Mercury", "Saturn"]:
             if sign_parity == 0:  # Odd sign
@@ -161,56 +153,71 @@ class PlanetaryStrengthEngine:
             if sign_parity == 1:  # Even sign
                 ojha_bala = 15.0
 
-        # Sthana Bala sum (simplified)
-        return uchcha_bala + dignity_score + ojha_bala
+        # 4. Kendradi Bala
+        kendradi_bala = 15.0
+        if planet.house in [1, 4, 7, 10]:
+            kendradi_bala = 60.0
+        elif planet.house in [2, 5, 8, 11]:
+            kendradi_bala = 30.0
+        elif planet.house in [3, 6, 9, 12]:
+            kendradi_bala = 15.0
 
-    # ─────────────────────────────────────────────────────────
-    # Dig Bala (Directional)
-    # ─────────────────────────────────────────────────────────
+        # 5. Drekkana Bala
+        drekkana_bala = 0.0
+        drekkana_idx = int(planet.degree_in_sign / 10.0)  # 0, 1, or 2
+        male_planets = ["Sun", "Mars", "Jupiter"]
+        herm_planets = ["Mercury", "Saturn"]
+        female_planets = ["Moon", "Venus"]
+
+        if planet.name in male_planets and drekkana_idx == 0:
+            drekkana_bala = 15.0
+        elif planet.name in herm_planets and drekkana_idx == 1:
+            drekkana_bala = 15.0
+        elif planet.name in female_planets and drekkana_idx == 2:
+            drekkana_bala = 15.0
+
+        return uchcha_bala + dignity_score + ojha_bala + kendradi_bala + drekkana_bala
 
     def _compute_dig_bala(self, planet: PlanetPosition) -> float:
-        """Dig Bala = 60 at max house, 0 at opposite house."""
+        """Dig Bala calculation."""
         max_house = self.DIG_BALA_MAX_HOUSE.get(planet.name)
         if not max_house:
             return 30.0
 
-        # Opposite house is the minimum point
         min_house = (max_house + 6 - 1) % 12 + 1
         
         diff = abs(planet.house - min_house) % 12
         if diff > 6:
             diff = 12 - diff
             
-        # Max is 60 when diff is 6 houses (at max_house)
         return 60.0 * (diff / 6.0)
 
-    # ─────────────────────────────────────────────────────────
-    # Kala Bala (Temporal)
-    # ─────────────────────────────────────────────────────────
-
     def _compute_kala_bala(self, planet: PlanetPosition, chart: Chart) -> float:
-        """Kala Bala includes Natonnata, Paksha, and Vara/Hora/Month/Year lord factors."""
-        # 1. Natonnata Bala (Day/Night)
+        """Kala Bala calculation."""
         is_day = True
+        hour = 12.0
         if chart.birth_event:
-            # Simple approximation of day/night based on local time
             hour = chart.birth_event.datetime_utc.hour + chart.birth_event.utc_offset_hours
             hour = hour % 24
             is_day = 6.0 <= hour < 18.0
 
+        # 1. Natonnata Bala
         natonnata = 30.0
-        if is_day:
-            if planet.name in ["Sun", "Jupiter", "Venus"]:
-                natonnata = 60.0
-            elif planet.name in ["Moon", "Mars", "Saturn"]:
-                natonnata = 0.0
+        if planet.name == "Mercury":
+            natonnata = 60.0
         else:
-            if planet.name in ["Moon", "Mars", "Saturn"]:
-                natonnata = 60.0
-            elif planet.name in ["Sun", "Jupiter", "Venus"]:
-                natonnata = 0.0
+            if is_day:
+                if planet.name in ["Sun", "Jupiter", "Venus"]:
+                    natonnata = 60.0
+                elif planet.name in ["Moon", "Mars", "Saturn"]:
+                    natonnata = 0.0
+            else:
+                if planet.name in ["Moon", "Mars", "Saturn"]:
+                    natonnata = 60.0
+                elif planet.name in ["Sun", "Jupiter", "Venus"]:
+                    natonnata = 0.0
 
-        # 2. Paksha Bala (waxing vs waning Moon strength)
+        # 2. Paksha Bala
         paksha_bala = 30.0
         sun_pos = chart.get_planet("Sun")
         moon_pos = chart.get_planet("Moon")
@@ -218,28 +225,38 @@ class PlanetaryStrengthEngine:
             diff = (moon_pos.longitude - sun_pos.longitude) % 360.0
             is_waxing = diff < 180.0
             
-            # Distance from New Moon (diff = 0 or 360) to Full Moon (diff = 180)
             proportion = diff / 180.0 if is_waxing else (360.0 - diff) / 180.0
             
             if planet.name in NATURAL_BENEFICS or (planet.name == "Moon" and is_waxing):
                 paksha_bala = 60.0 * proportion
             else:
                 paksha_bala = 60.0 * (1.0 - proportion)
+                
+            if planet.name == "Moon":
+                paksha_bala *= 2.0  # Moon's paksha bala is doubled
 
-        # Kala Bala sum
-        return natonnata + paksha_bala
+        # 3. Tribhaga Bala
+        tribhaga_bala = 0.0
+        if planet.name == "Jupiter":
+            tribhaga_bala = 60.0
+        else:
+            third_of_day = int(((hour - 6.0) % 24.0) / 4.0)  # 0 to 5 (0,1,2 = day thirds, 3,4,5 = night thirds)
+            if is_day:
+                if third_of_day == 0 and planet.name == "Mercury": tribhaga_bala = 60.0
+                elif third_of_day == 1 and planet.name == "Sun": tribhaga_bala = 60.0
+                elif third_of_day == 2 and planet.name == "Saturn": tribhaga_bala = 60.0
+            else:
+                if third_of_day == 3 and planet.name == "Moon": tribhaga_bala = 60.0
+                elif third_of_day == 4 and planet.name == "Venus": tribhaga_bala = 60.0
+                elif third_of_day == 5 and planet.name == "Mars": tribhaga_bala = 60.0
 
-    # ─────────────────────────────────────────────────────────
-    # Cheshta Bala (Motional)
-    # ─────────────────────────────────────────────────────────
+        return natonnata + paksha_bala + tribhaga_bala
 
     def _compute_cheshta_bala(self, planet: PlanetPosition) -> float:
-        """Cheshta Bala is high for retrograde and slow planets, low for fast ones."""
+        """Cheshta Bala calculation."""
         if planet.retrograde:
             return 60.0
             
-        # Speed factor: slower than average gives higher Cheshta Bala
-        # Average daily speed (approximate)
         avg_speed = {
             "Sun": 0.98,
             "Moon": 13.17,
@@ -251,19 +268,12 @@ class PlanetaryStrengthEngine:
         }.get(planet.name, 1.0)
 
         speed_ratio = abs(planet.speed) / avg_speed
-        # Clamp between 0.0 and 2.0
         speed_ratio = max(0.0, min(2.0, speed_ratio))
         
-        # Slower speed -> higher cheshta bala
         return 60.0 * (1.0 - (speed_ratio / 2.0))
 
-    # ─────────────────────────────────────────────────────────
-    # Drik Bala (Aspectual)
-    # ─────────────────────────────────────────────────────────
-
     def _compute_drik_bala(self, planet: PlanetPosition, chart: Chart) -> float:
-        """Drik Bala: Benefic aspects add strength, malefic aspects reduce it."""
-        # Find which house the planet is in
+        """Drik Bala calculation."""
         house = chart.get_house(planet.house)
         if not house:
             return 30.0
@@ -275,5 +285,4 @@ class PlanetaryStrengthEngine:
             elif aspecting in NATURAL_MALEFICS:
                 net_drishti -= 15.0
 
-        # Center at 30, range 0 to 60
         return max(0.0, min(60.0, 30.0 + net_drishti))

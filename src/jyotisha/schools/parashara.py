@@ -54,15 +54,14 @@ class ParasharaModule:
             "sources_used": self.sources
         }
 
-    def predict_timing(self, chart: Chart, event_type: str, target_date: Optional[str] = None) -> SchoolResult:
+    def predict(self, chart: Chart, question: str, target_date: Optional[str] = None) -> SchoolResult:
         """
         Predict timing of an event using Parashara methods (Vimshottari Dasha + transits).
-        (Stub implementation for the consensus engine interface)
         """
         # A full implementation would check Dasha lords, Antardasha lords, and their connection
         # to the event's significator houses (e.g., House 7 for marriage).
         
-        if event_type.lower() == "marriage":
+        if question.lower() == "marriage":
             lord_7 = chart.get_house_lord(7)
             return SchoolResult(
                 school=self.school_name,
@@ -75,9 +74,13 @@ class ParasharaModule:
             
         return SchoolResult(
             school=self.school_name,
-            answer="Not implemented for this event type.",
+            answer="Not implemented for this question type.",
             confidence=0.0
         )
+
+    def explain(self, result: SchoolResult) -> str:
+        """Explain the school's result."""
+        return f"[Parashara Explanation]: {result.reasoning}"
 
     def _analyze_houses(self, chart: Chart) -> list[dict]:
         """Generate analysis for all 12 houses."""

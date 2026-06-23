@@ -276,6 +276,45 @@ class ArudhaPada(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────
+# Argala
+# ─────────────────────────────────────────────────────────────
+
+class ArgalaIntervention(BaseModel):
+    """Details of a specific Argala/Virodhargala pair."""
+    argala_house_relative: int
+    virodhargala_house_relative: int
+    argala_planets: list[str] = Field(default_factory=list)
+    virodhargala_planets: list[str] = Field(default_factory=list)
+    is_active: bool = False
+
+class ArgalaResult(BaseModel):
+    """Argala status for a specific house or planet."""
+    target: str  # e.g., "House 1" or "Sun"
+    primary_argalas: list[ArgalaIntervention] = Field(default_factory=list)
+    secondary_argalas: list[ArgalaIntervention] = Field(default_factory=list)
+    has_unobstructed_argala: bool = False
+
+
+# ─────────────────────────────────────────────────────────────
+# Transit
+# ─────────────────────────────────────────────────────────────
+
+class TransitHit(BaseModel):
+    """A transit hit on a natal planet or house."""
+    transit_planet: str
+    natal_point: str
+    aspect_type: str  # "Conjunction", "Opposition", "Square", "Trine", etc., or Vedic Aspects
+    orb: float
+    is_exact: bool
+
+class TransitResult(BaseModel):
+    """Result of transiting planets over a natal chart."""
+    date: str
+    transit_planets: list[PlanetPosition]
+    hits: list[TransitHit] = Field(default_factory=list)
+    gochara_from_moon: dict[str, int] = Field(default_factory=dict)  # Planet -> House from Natal Moon
+
+# ─────────────────────────────────────────────────────────────
 # Upagraha
 # ─────────────────────────────────────────────────────────────
 
