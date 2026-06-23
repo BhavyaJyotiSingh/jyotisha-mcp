@@ -155,11 +155,30 @@ class BhavaChalitHouseSystem(HouseSystemStrategy):
                     break
         return houses
 
+class SripatiHouseSystem(BhavaChalitHouseSystem):
+    """
+    Sripati (Porphyry) House System.
+    Trisects the arc between Ascendant, IC, Descendant, and MC.
+    Uses Bhava Chalit mapping where cusps are Bhava Madhya (midpoints).
+    """
+    pass
+
+class PlacidusHouseSystem(CuspHouseSystem):
+    """
+    Placidus House System.
+    Time-trisection of semi-diurnal arcs.
+    Each cusp exactly marks the start (Arambha) of the house.
+    Used fundamentally in KP Astrology.
+    """
+    pass
+
 def get_house_strategy(house_system_code: str) -> HouseSystemStrategy:
     """Factory method to get the correct house strategy."""
     if house_system_code == "W":
         return WholeSignHouseSystem()
-    elif house_system_code in ("B", "O"): # Bhava Chalit / Porphyry approximation
-        return BhavaChalitHouseSystem()
-    else: # P (Placidus), K (Koch/KP), E (Equal)
+    elif house_system_code in ("B", "O"): # Bhava Chalit / Sripati (Porphyry)
+        return SripatiHouseSystem()
+    elif house_system_code in ("P", "K"): # Placidus / Koch (KP style)
+        return PlacidusHouseSystem()
+    else: # E (Equal) and others
         return CuspHouseSystem()

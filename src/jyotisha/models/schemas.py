@@ -64,7 +64,8 @@ class PlanetPosition(BaseModel):
     degree_in_sign: float = Field(..., ge=0, lt=30)
     retrograde: bool = False
     combust: bool = False
-    planetary_war: Optional[str] = None
+    in_war: bool = False
+    war_winner: bool = False
     nakshatra: str
     nakshatra_number: int = Field(..., ge=0, le=26)
     pada: int = Field(..., ge=1, le=4)

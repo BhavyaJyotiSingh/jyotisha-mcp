@@ -168,7 +168,9 @@ class ChartEngine:
             dignity = compute_dignity(name, data["sign_number"], data["degree_in_sign"])
 
             # Check vargottama
-            navamsa_sign = self._compute_navamsa_sign(data["longitude"])
+            from jyotisha.engines.varga import VargaEngine
+            varga_engine = VargaEngine()
+            navamsa_sign = varga_engine.compute_varga_sign(data["longitude"], 9)
             is_vargottama = (data["sign_number"] == navamsa_sign)
 
             # Check Pushkara Navamsha
@@ -246,49 +248,28 @@ class ChartEngine:
         """
         Generate a divisional chart from a base D1 chart.
         """
-        varga_methods = {
-            2: self._compute_hora_sign,
-            3: self._compute_drekkana_sign,
-            4: self._compute_chaturthamsa_sign,
-            5: self._compute_panchamsa_sign,
-            6: self._compute_shasthamsa_sign,
-            7: self._compute_saptamsa_sign,
-            8: self._compute_ashtamsa_sign,
-            9: self._compute_navamsa_sign,
-            10: self._compute_dasamsa_sign,
-            11: self._compute_rudramsa_sign,
-            12: self._compute_dwadasamsa_sign,
-            16: self._compute_shodasamsa_sign,
-            20: self._compute_vimsamsa_sign,
-            24: self._compute_siddhamsa_sign,
-            27: self._compute_bhamsa_sign,
-            30: self._compute_trimsamsa_sign,
-            40: self._compute_khavedamsa_sign,
-            45: self._compute_akshavedamsa_sign,
-            60: self._compute_shashtiamsa_sign,
-        }
+        from jyotisha.engines.varga import VargaEngine
+        varga_engine = VargaEngine()
 
-        if division not in varga_methods:
+        if division not in varga_engine.get_supported_vargas():
             raise ValueError(
                 f"Division D{division} not supported. "
-                f"Supported: {sorted(varga_methods.keys())}"
+                f"Supported: {sorted(varga_engine.get_supported_vargas())}"
             )
 
-        compute_sign = varga_methods[division]
-
         # Compute new lagna sign
-        asc_varga_sign = compute_sign(base_chart.ascendant.longitude)
-        varga_asc_degree = self._compute_varga_degree(base_chart.ascendant.longitude, division)
+        asc_varga_sign = varga_engine.compute_varga_sign(base_chart.ascendant.longitude, division)
+        varga_asc_degree = varga_engine.compute_varga_degree(base_chart.ascendant.longitude, division)
         varga_asc_longitude = (asc_varga_sign * 30.0) + varga_asc_degree
 
         # Compute planet positions in the varga
         varga_planets = []
         for planet in base_chart.planets:
-            new_sign = compute_sign(planet.longitude)
+            new_sign = varga_engine.compute_varga_sign(planet.longitude, division)
             house_num = ((new_sign - asc_varga_sign) % 12) + 1
             
             # Vargas mathematically represent sub-divisions. We compute their exact fractional projection.
-            varga_degree = self._compute_varga_degree(planet.longitude, division)
+            varga_degree = varga_engine.compute_varga_degree(planet.longitude, division)
             varga_longitude = (new_sign * 30.0) + varga_degree
             dignity = compute_dignity(planet.name, new_sign, varga_degree)
 
@@ -304,7 +285,8 @@ class ChartEngine:
                 degree_in_sign=varga_degree,
                 retrograde=planet.retrograde,
                 combust=planet.combust,
-                planetary_war=planet.planetary_war,
+                in_war=planet.in_war,
+                war_winner=planet.war_winner,
                 nakshatra=planet.nakshatra,
                 nakshatra_number=planet.nakshatra_number,
                 pada=planet.pada,
@@ -331,7 +313,6 @@ class ChartEngine:
             computed_at=datetime.now(timezone.utc),
         )
 
-        varga_asc_longitude = (asc_varga_sign * 30.0) + 15.0
         return Chart(
             ascendant=Ascendant(
                 longitude=varga_asc_longitude,
@@ -380,250 +361,3 @@ class ChartEngine:
                         break
 
         return houses
-
-    # ─────────────────────────────────────────────────────────
-    # Varga Sign Computation Methods
-    # ─────────────────────────────────────────────────────────
-
-    @staticmethod
-    def _compute_varga_degree(longitude: float, division: int) -> float:
-        """Calculate the exact degree of a planet mapped mathematically into the Varga sign."""
-        if division == 30:
-            deg = longitude % 30.0
-            sign = int(longitude // 30.0)
-            if sign % 2 == 0:
-                segments = [(0.0, 5.0), (5.0, 10.0), (10.0, 18.0), (18.0, 25.0), (25.0, 30.0)]
-            else:
-                segments = [(0.0, 5.0), (5.0, 12.0), (12.0, 20.0), (20.0, 25.0), (25.0, 30.0)]
-                
-            fraction = 0.5
-            for start_deg, end_deg in segments:
-                if deg <= end_deg or end_deg == 30.0:
-                    slice_size = end_deg - start_deg
-                    fraction = (deg - start_deg) / slice_size
-                    break
-        else:
-            slice_size = 30.0 / division
-            fraction = (longitude % slice_size) / slice_size
-            
-        return fraction * 30.0
-
-    @staticmethod
-    def _compute_navamsa_sign(longitude: float) -> int:
-        """D9 Navamsa: divide each sign into 9 parts of 3°20'."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 9))
-        element = sign % 4
-        starts = [0, 9, 6, 3]  # Fire→Aries, Earth→Cap, Air→Libra, Water→Cancer
-        return (starts[element] + part) % 12
-
-    @staticmethod
-    def _compute_hora_sign(longitude: float) -> int:
-        """D2 Hora: 2 parts of 15° each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        if deg < 15:
-            # Odd signs → Sun (Leo), Even signs → Moon (Cancer)
-            return Sign.LEO.value if sign % 2 == 0 else Sign.CANCER.value
-        else:
-            return Sign.CANCER.value if sign % 2 == 0 else Sign.LEO.value
-
-    @staticmethod
-    def _compute_drekkana_sign(longitude: float) -> int:
-        """D3 Drekkana: 3 parts of 10° each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 10)
-        offsets = [0, 4, 8]
-        return (sign + offsets[part]) % 12
-
-    @staticmethod
-    def _compute_chaturthamsa_sign(longitude: float) -> int:
-        """D4 Chaturthamsha: 4 parts of 7°30' each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 7.5)
-        return (sign + part * 3) % 12
-
-    @staticmethod
-    def _compute_panchamsa_sign(longitude: float) -> int:
-        """D5 Panchamsha: 5 parts of 6° each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 6.0)
-
-        # Odd signs (Mesha, Mithuna, Simha, Tula, Dhanu, Kumbha)
-        odd_map = [Sign.ARIES.value, Sign.AQUARIUS.value, Sign.SAGITTARIUS.value, Sign.GEMINI.value, Sign.LIBRA.value]
-        # Even signs
-        even_map = [Sign.TAURUS.value, Sign.VIRGO.value, Sign.PISCES.value, Sign.CAPRICORN.value, Sign.SCORPIO.value]
-
-        if sign % 2 == 0:  # Odd sign (0-indexed: Aries is 0)
-            return odd_map[part]
-        else:
-            return even_map[part]
-
-    @staticmethod
-    def _compute_shasthamsa_sign(longitude: float) -> int:
-        """D6 Shasthamsa: 6 parts of 5° each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 5.0)
-
-        # Odd signs start from Aries, Even signs start from Libra
-        start = Sign.ARIES.value if sign % 2 == 0 else Sign.LIBRA.value
-        return (start + part) % 12
-
-    @staticmethod
-    def _compute_saptamsa_sign(longitude: float) -> int:
-        """D7 Saptamsha: 7 parts of 4°17'8.57\" each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 7))
-        if sign % 2 == 0:  # Odd sign
-            return (sign + part) % 12
-        else:
-            return (sign + 6 + part) % 12
-
-    @staticmethod
-    def _compute_ashtamsa_sign(longitude: float) -> int:
-        """D8 Ashtamsha: 8 parts of 3°45' each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 3.75)
-
-        modality = sign % 3  # 0 = Movable, 1 = Fixed, 2 = Dual
-        if modality == 0:
-            start = sign
-        elif modality == 1:
-            start = (sign + 8) % 12
-        else:
-            start = (sign + 4) % 12
-        return (start + part) % 12
-
-    @staticmethod
-    def _compute_dasamsa_sign(longitude: float) -> int:
-        """D10 Dasamsha: 10 parts of 3° each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 3.0)
-        if sign % 2 == 0:
-            return (sign + part) % 12
-        else:
-            return (sign + 8 + part) % 12
-
-    @staticmethod
-    def _compute_rudramsa_sign(longitude: float) -> int:
-        """D11 Rudramsa: 11 parts of 2°43'38\" each."""
-        deg = longitude % 30
-        part = int(deg / (30.0 / 11.0))
-        # Starts from Aries for all signs
-        return part % 12
-
-    @staticmethod
-    def _compute_dwadasamsa_sign(longitude: float) -> int:
-        """D12 Dwadashamsha: 12 parts of 2°30' each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 2.5)
-        return (sign + part) % 12
-
-    @staticmethod
-    def _compute_shodasamsa_sign(longitude: float) -> int:
-        """D16 Shodashamsha: 16 parts of 1°52'30\" each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 16))
-        modality = sign % 3
-        starts = [0, 4, 8]
-        return (starts[modality] + part) % 12
-
-    @staticmethod
-    def _compute_vimsamsa_sign(longitude: float) -> int:
-        """D20 Vimshamsha: 20 parts of 1°30' each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 20))
-        modality = sign % 3
-        starts = [0, 8, 4]
-        return (starts[modality] + part) % 12
-
-    @staticmethod
-    def _compute_siddhamsa_sign(longitude: float) -> int:
-        """D24 Siddhamsha: 24 parts of 1°15' each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 24))
-        if sign % 2 == 0:
-            return (Sign.LEO.value + part) % 12
-        else:
-            return (Sign.CANCER.value + part) % 12
-
-    @staticmethod
-    def _compute_bhamsa_sign(longitude: float) -> int:
-        """D27 Bhamsha/Nakshatramsha: 27 parts per sign."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 27))
-        element = sign % 4
-        starts = [0, 3, 6, 9]
-        return (starts[element] + part) % 12
-
-    @staticmethod
-    def _compute_trimsamsa_sign(longitude: float) -> int:
-        """
-        D30 Trimshamsha: irregular division per BPHS.
-        """
-        sign = int(longitude // 30)
-        deg = longitude % 30
-
-        if sign % 2 == 0:  # Odd sign
-            segments = [
-                (5, Sign.ARIES.value),      # Mars
-                (10, Sign.AQUARIUS.value),   # Saturn
-                (18, Sign.SAGITTARIUS.value),  # Jupiter
-                (25, Sign.GEMINI.value),     # Mercury
-                (30, Sign.LIBRA.value),      # Venus
-            ]
-        else:  # Even sign
-            segments = [
-                (5, Sign.LIBRA.value),       # Venus
-                (12, Sign.GEMINI.value),     # Mercury
-                (20, Sign.SAGITTARIUS.value),  # Jupiter
-                (25, Sign.AQUARIUS.value),   # Saturn
-                (30, Sign.ARIES.value),      # Mars
-            ]
-
-        for boundary, result_sign in segments:
-            if deg < boundary:
-                return result_sign
-        return segments[-1][1]
-
-    @staticmethod
-    def _compute_khavedamsa_sign(longitude: float) -> int:
-        """D40 Khavedamsha: 40 parts of 0°45' each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 0.75)
-
-        start = Sign.ARIES.value if sign % 2 == 0 else Sign.LIBRA.value
-        return (start + part) % 12
-
-    @staticmethod
-    def _compute_akshavedamsa_sign(longitude: float) -> int:
-        """D45 Akshavedamsha: 45 parts of 0°40' each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 45.0))
-
-        modality = sign % 3  # Movable, Fixed, Dual
-        starts = [Sign.ARIES.value, Sign.LEO.value, Sign.SAGITTARIUS.value]
-        return (starts[modality] + part) % 12
-
-    @staticmethod
-    def _compute_shashtiamsa_sign(longitude: float) -> int:
-        """D60 Shashtiamsha: 60 parts of 0°30' each."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / 0.5)
-        return (sign + part) % 12

@@ -141,6 +141,29 @@ class AstronomicalEngine:
                 threshold = COMBUSTION_DISTANCE_RETRO[Planet(planet_name)]
             p["combust"] = dist < threshold
 
+        # Planetary War (Graha Yuddha)
+        # Tara Grahas: Mars, Mercury, Jupiter, Venus, Saturn
+        tara_grahas = [Planet.MARS, Planet.MERCURY, Planet.JUPITER, Planet.VENUS, Planet.SATURN]
+        for name in tara_grahas:
+            results[name]["in_war"] = False
+            results[name]["war_winner"] = False
+
+        for i, p1_name in enumerate(tara_grahas):
+            for p2_name in tara_grahas[i+1:]:
+                p1 = results[p1_name]
+                p2 = results[p2_name]
+                dist = self._angular_distance(p1["longitude"], p2["longitude"])
+                if dist <= 1.0:
+                    p1["in_war"] = True
+                    p2["in_war"] = True
+                    # Winner is the one with higher northern latitude (ecliptic latitude)
+                    if p1["latitude"] > p2["latitude"]:
+                        p1["war_winner"] = True
+                        p2["war_winner"] = False
+                    elif p2["latitude"] > p1["latitude"]:
+                        p2["war_winner"] = True
+                        p1["war_winner"] = False
+
         return results
 
     def compute_ascendant(

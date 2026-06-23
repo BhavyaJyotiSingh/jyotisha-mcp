@@ -103,7 +103,7 @@ class CalendarEngine:
         )
 
         # Convert to UTC
-        if HAS_TZ_LIBS and tz_name:
+        if HAS_TZ_LIBS and tz_name and local_naive.year >= 1900:
             tz = pytz.timezone(tz_name)
             try:
                 local_aware = tz.localize(local_naive, is_dst=None)
@@ -118,20 +118,26 @@ class CalendarEngine:
             utc_offset = local_aware.utcoffset().total_seconds() / 3600
             dst_active = bool(local_aware.dst())
         else:
-            # Fallback: assume UTC
-            utc_dt = local_naive.replace(tzinfo=timezone.utc)
-            notes.append("Timezone libraries unavailable; assuming UTC.")
+            # Historical dates before standard time (pre-1900) or fallback
+            # Use Local Mean Time (LMT) calculated directly from longitude
+            # 15 degrees = 1 hour, so longitude / 15 = hours offset
+            utc_offset = longitude / 15.0
+            from datetime import timedelta
+            utc_dt = (local_naive - timedelta(hours=utc_offset)).replace(tzinfo=timezone.utc)
+            dst_active = False
+            if local_naive.year < 1900:
+                notes.append("Pre-1900 date detected. Enforcing strict Local Mean Time (LMT) derived from longitude.")
+            else:
+                notes.append("Timezone libraries unavailable; falling back to LMT based on longitude.")
+
+        # Handle pre-Gregorian dates strictly (Before Oct 15, 1582)
+        if utc_dt.year < 1582 or (utc_dt.year == 1582 and utc_dt.month < 10) or (utc_dt.year == 1582 and utc_dt.month == 10 and utc_dt.day < 15):
+            if calendar == "Gregorian":
+                calendar = "Julian"
+                notes.append("Date before Oct 15, 1582; automatically using Julian calendar.")
 
         # Compute Julian Day
         jd = self._compute_julian_day(utc_dt, calendar)
-
-        # Handle pre-Gregorian dates
-        if utc_dt.year < 1582 and calendar == "Gregorian":
-            calendar = "Julian"
-            notes.append(
-                "Date before 1582; automatically using Julian calendar."
-            )
-            jd = self._compute_julian_day(utc_dt, "Julian")
 
         return BirthEvent(
             datetime_utc=utc_dt,
