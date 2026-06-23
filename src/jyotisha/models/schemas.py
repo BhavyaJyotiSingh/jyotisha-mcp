@@ -85,6 +85,9 @@ class House(BaseModel):
     sign_number: int = Field(..., ge=0, le=11)
     lord: str
     lord_house: Optional[int] = None
+    cusp_longitude: float = 0.0
+    span_start: float = 0.0
+    span_end: float = 0.0
     planets_in_house: list[str] = Field(default_factory=list)
     aspects_received: list[str] = Field(default_factory=list)
 
@@ -165,6 +168,8 @@ class DashaPeriod(BaseModel):
     lord: str
     start_date: str
     end_date: str
+    start_jd: float = 0.0
+    end_jd: float = 0.0
     years: float
     is_balance: bool = False
     sub_periods: list[DashaPeriod] = Field(default_factory=list)

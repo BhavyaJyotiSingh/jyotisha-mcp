@@ -88,6 +88,8 @@ class DashaEngine:
                 lord=lord,
                 start_date=self._jd_to_date(current_jd),
                 end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
                 years=round(years, 4),
                 is_balance=is_balance,
                 sub_periods=sub_periods,
@@ -224,6 +226,8 @@ class DashaEngine:
                 lord=sub_lord,
                 start_date=self._jd_to_date(current_jd),
                 end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
                 years=round(sub_years, 4),
                 sub_periods=deeper_subs,
             ))

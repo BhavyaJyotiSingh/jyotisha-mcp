@@ -20,6 +20,7 @@ from jyotisha.models.schemas import (
 from jyotisha.engines.astronomy import (
     AstronomicalEngine, compute_dignity, compute_aspects,
 )
+from jyotisha.engines.houses import get_house_strategy
 from jyotisha.engines.calendar import CalendarEngine
 
 
@@ -147,8 +148,9 @@ class ChartEngine:
             lord=SIGN_LORDS[Sign(asc_raw["sign_number"])].value,
         )
 
-        # Assign houses (Whole Sign)
-        houses = self._build_houses(asc_sign_num)
+        # Create house strategy
+        strategy = get_house_strategy(self.house_system)
+        houses = strategy.build_houses(asc_sign_num, asc_data.get("cusps", []))
 
         # Compute planetary war (Graha Yuddha)
         war_results = compute_graha_yuddhas(raw_positions)
@@ -156,8 +158,8 @@ class ChartEngine:
         # Build planet models
         planets = []
         for name, data in raw_positions.items():
-            # Compute house number (Whole Sign)
-            house_num = ((data["sign_number"] - asc_sign_num) % 12) + 1
+            # House number will be updated by the strategy later
+            house_num = 1
 
             # Compute dignity
             dignity = compute_dignity(name, data["sign_number"], data["degree_in_sign"])
@@ -192,10 +194,13 @@ class ChartEngine:
             )
             planets.append(planet)
 
+        # Assign planets to houses using strategy
+        houses = strategy.assign_planets(houses, planets)
+
         # Compute aspects
         aspects = compute_aspects(raw_positions)
-        houses = self._assign_planets_and_aspects_to_houses(
-            houses, planets, aspects, asc_sign_num
+        houses = self._assign_lords_and_aspects_to_houses(
+            houses, planets, aspects
         )
 
         ayan_value = self.astro.get_ayanamsha_value(jd)
@@ -301,10 +306,12 @@ class ChartEngine:
             )
             varga_planets.append(varga_planet)
 
-        # Build houses for varga
-        houses = self._build_houses(asc_varga_sign)
-        houses = self._assign_planets_and_aspects_to_houses(
-            houses, varga_planets, {}, asc_varga_sign
+        # Build houses for varga (always Whole Sign for D-charts)
+        varga_strategy = get_house_strategy("W")
+        houses = varga_strategy.build_houses(asc_varga_sign)
+        houses = varga_strategy.assign_planets(houses, varga_planets)
+        houses = self._assign_lords_and_aspects_to_houses(
+            houses, varga_planets, {}
         )
 
         metadata = ChartMetadata(
@@ -336,35 +343,12 @@ class ChartEngine:
     # House Construction
     # ─────────────────────────────────────────────────────────
 
-    def _build_houses(self, asc_sign_num: int) -> list[House]:
-        houses = []
-        for i in range(12):
-            sign_num = (asc_sign_num + i) % 12
-            sign = Sign(sign_num)
-            houses.append(House(
-                number=i + 1,
-                sign=SIGN_NAMES[sign_num],
-                sign_number=sign_num,
-                lord=SIGN_LORDS[sign].value,
-                planets_in_house=[],
-                aspects_received=[],
-            ))
-        return houses
-
-    def _assign_planets_and_aspects_to_houses(
+    def _assign_lords_and_aspects_to_houses(
         self,
         houses: list[House],
         planets: list[PlanetPosition],
         aspects: dict,
-        asc_sign_num: int,
     ) -> list[House]:
-        # Assign occupants
-        for planet in planets:
-            for house in houses:
-                if house.sign_number == planet.sign_number:
-                    house.planets_in_house.append(planet.name)
-                    break
-
         # Assign lord house positions
         for house in houses:
             lord_name = house.lord

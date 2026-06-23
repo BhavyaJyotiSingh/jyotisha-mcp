@@ -49,8 +49,7 @@ class AstronomicalEngine:
         ephe_path: Optional[str] = None,
     ):
         if not HAS_SWISSEPH:
-            print("Warning: pyswisseph not found. AstronomicalEngine will use mock data.")
-
+            raise RuntimeError("pyswisseph is required for production Jyotisha computations.")
 
         self.ayanamsha_id = ayanamsha
         self.true_nodes = true_nodes
@@ -82,18 +81,6 @@ class AstronomicalEngine:
         Returns:
             Dictionary keyed by planet name with position data.
         """
-        if not HAS_SWISSEPH:
-            return {
-                "Sun": self._build_position_data("Sun", 15.0, speed=1.0),
-                "Moon": self._build_position_data("Moon", 45.0, speed=13.0),
-                "Mars": self._build_position_data("Mars", 280.0, speed=0.5),
-                "Mercury": self._build_position_data("Mercury", 25.0, speed=1.5),
-                "Jupiter": self._build_position_data("Jupiter", 100.0, speed=0.1),
-                "Venus": self._build_position_data("Venus", 355.0, speed=1.2),
-                "Saturn": self._build_position_data("Saturn", 200.0, speed=0.03),
-                "Rahu": self._build_position_data("Rahu", 50.0, speed=-0.05),
-                "Ketu": self._build_position_data("Ketu", 230.0, speed=-0.05),
-            }
         
         swe.set_sid_mode(self.ayanamsha_id)
 
@@ -172,13 +159,6 @@ class AstronomicalEngine:
         Returns:
             Dictionary with ascendant data and house cusps.
         """
-        if not HAS_SWISSEPH:
-            return {
-                "ascendant": self._build_position_data("Ascendant", 10.0),
-                "mc": 280.0,
-                "cusps": [10.0, 40.0, 70.0, 100.0, 130.0, 160.0, 190.0, 220.0, 250.0, 280.0, 310.0, 340.0]
-            }
-
         swe.set_sid_mode(self.ayanamsha_id)
 
         cusps, ascmc = swe.houses_ex(
@@ -203,8 +183,6 @@ class AstronomicalEngine:
 
     def get_ayanamsha_value(self, jd: float) -> float:
         """Get the ayanamsha value for a given Julian Day."""
-        if not HAS_SWISSEPH:
-            return 24.0
         swe.set_sid_mode(self.ayanamsha_id)
         return swe.get_ayanamsa_ut(jd)
 
@@ -224,9 +202,6 @@ class AstronomicalEngine:
 
         Uses Swiss Ephemeris rise/set function with atmospheric refraction.
         """
-        if not HAS_SWISSEPH:
-            return jd - 0.25
-        
         swe.set_topo(lon, lat, alt)
 
         # SE_CALC_RISE = 1, SE_BIT_DISC_CENTER = 256
@@ -250,9 +225,6 @@ class AstronomicalEngine:
         alt: float = 0.0,
     ) -> float:
         """Compute sunset time as Julian Day."""
-        if not HAS_SWISSEPH:
-            return jd + 0.25
-            
         swe.set_topo(lon, lat, alt)
 
         try:
@@ -273,10 +245,6 @@ class AstronomicalEngine:
     @staticmethod
     def datetime_to_jd(dt: datetime) -> float:
         """Convert a datetime to Julian Day Number (UT)."""
-        if not HAS_SWISSEPH:
-            # Very rough approximation for testing
-            return 2451545.0 + (dt - datetime(2000, 1, 1, 12, tzinfo=timezone.utc)).total_seconds() / 86400.0
-            
         if dt.tzinfo is not None:
             dt = dt.astimezone(timezone.utc)
         hour_decimal = dt.hour + dt.minute / 60.0 + dt.second / 3600.0
@@ -285,10 +253,6 @@ class AstronomicalEngine:
     @staticmethod
     def jd_to_datetime(jd: float) -> datetime:
         """Convert Julian Day Number to datetime (UTC)."""
-        if not HAS_SWISSEPH:
-            from datetime import timedelta
-            return datetime(2000, 1, 1, 12, tzinfo=timezone.utc) + timedelta(days=jd - 2451545.0)
-            
         year, month, day, hour_frac = swe.revjul(jd)
         hour = int(hour_frac)
         minute_frac = (hour_frac - hour) * 60
