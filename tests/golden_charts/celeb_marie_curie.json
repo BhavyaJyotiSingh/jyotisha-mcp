@@ -1,0 +1,18 @@
+{
+  "name": "Marie Curie",
+  "datetime_str": "1867-11-07T12:00:00",
+  "latitude": 52.2297,
+  "longitude": 21.0122,
+  "expected_ascendant": "Sagittarius",
+  "expected_planets": {
+    "Sun": "Libra",
+    "Moon": "Aquarius",
+    "Mercury": "Scorpio",
+    "Venus": "Scorpio",
+    "Mars": "Scorpio",
+    "Jupiter": "Aquarius",
+    "Saturn": "Scorpio",
+    "Rahu": "Leo",
+    "Ketu": "Aquarius"
+  }
+}

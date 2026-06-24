@@ -1,0 +1,18 @@
+{
+  "name": "hist_1400_12",
+  "datetime_str": "1400-12-23T10:13:00",
+  "latitude": 25.543866529488,
+  "longitude": -25.048343745440576,
+  "expected_ascendant": "Aquarius",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Pisces",
+    "Mercury": "Sagittarius",
+    "Venus": "Capricorn",
+    "Mars": "Libra",
+    "Jupiter": "Libra",
+    "Saturn": "Sagittarius",
+    "Rahu": "Virgo",
+    "Ketu": "Pisces"
+  }
+}

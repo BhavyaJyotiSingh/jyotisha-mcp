@@ -1,0 +1,18 @@
+{
+  "name": "hist_1700_6",
+  "datetime_str": "1700-06-01T23:56:00",
+  "latitude": 31.968066888592418,
+  "longitude": 113.25314372882744,
+  "expected_ascendant": "Aquarius",
+  "expected_planets": {
+    "Sun": "Taurus",
+    "Moon": "Scorpio",
+    "Mercury": "Aries",
+    "Venus": "Cancer",
+    "Mars": "Libra",
+    "Jupiter": "Capricorn",
+    "Saturn": "Aquarius",
+    "Rahu": "Leo",
+    "Ketu": "Aquarius"
+  }
+}

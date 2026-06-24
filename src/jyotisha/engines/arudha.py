@@ -53,6 +53,16 @@ class ArudhaEngine:
                         lord_planet = p1
                     else:
                         lord_planet = p1 if p1.degree_in_sign > p2.degree_in_sign else p2
+            elif house.sign_number == 11: # Pisces
+                p1 = chart.get_planet("Jupiter")
+                p2 = chart.get_planet("Ketu")
+                if p1 and p2:
+                    if p1.sign_number == 11 and p2.sign_number != 11:
+                        lord_planet = p2
+                    elif p2.sign_number == 11 and p1.sign_number != 11:
+                        lord_planet = p1
+                    else:
+                        lord_planet = p1 if p1.degree_in_sign > p2.degree_in_sign else p2
                         
             if not lord_planet:
                 continue

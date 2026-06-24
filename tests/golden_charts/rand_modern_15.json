@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_15",
+  "datetime_str": "1912-02-18T06:32:00",
+  "latitude": -28.175950229951837,
+  "longitude": 155.97337607773528,
+  "expected_ascendant": "Aquarius",
+  "expected_planets": {
+    "Sun": "Aquarius",
+    "Moon": "Aquarius",
+    "Mercury": "Capricorn",
+    "Venus": "Capricorn",
+    "Mars": "Taurus",
+    "Jupiter": "Scorpio",
+    "Saturn": "Aries",
+    "Rahu": "Aries",
+    "Ketu": "Libra"
+  }
+}

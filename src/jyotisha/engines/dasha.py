@@ -288,19 +288,906 @@ class DashaEngine:
             timeline=timeline
         )
 
+    def _compare_jaimini_sign_strength(self, chart: Chart, sign_a: int, sign_b: int) -> int:
+        """
+        Compares the Jaimini strength of two signs (0-11).
+        Returns:
+            1 if sign_a is stronger,
+            -1 if sign_b is stronger,
+            0 if they are tied.
+        """
+        # 1. Number of planets in each sign
+        planets_in_a = [p for p in chart.planets if p.sign_number == sign_a]
+        planets_in_b = [p for p in chart.planets if p.sign_number == sign_b]
+        
+        if len(planets_in_a) != len(planets_in_b):
+            return 1 if len(planets_in_a) > len(planets_in_b) else -1
+            
+        # 2. Presence of Jupiter, Mercury, or sign lord in the sign
+        from jyotisha.constants import SIGN_LORDS, Sign, Planet
+        lord_a_name = SIGN_LORDS[Sign(sign_a)].value
+        lord_b_name = SIGN_LORDS[Sign(sign_b)].value
+        
+        score_a = 0
+        score_b = 0
+        for p in planets_in_a:
+            if p.name in [Planet.JUPITER, Planet.MERCURY, lord_a_name]:
+                score_a += 1
+        for p in planets_in_b:
+            if p.name in [Planet.JUPITER, Planet.MERCURY, lord_b_name]:
+                score_b += 1
+                
+        if score_a != score_b:
+            return 1 if score_a > score_b else -1
+            
+        # 3. Check Jaimini aspects (Rashi Drishti) from Jupiter, Mercury, or sign lord
+        def sign_aspects_sign(s1: int, s2: int) -> bool:
+            if s1 == s2:
+                return True
+            from jyotisha.constants import SIGN_MODALITIES, Modality
+            m1 = SIGN_MODALITIES[s1]
+            m2 = SIGN_MODALITIES[s2]
+            if m1 == Modality.MOVABLE and m2 == Modality.FIXED:
+                return s2 != (s1 + 1) % 12
+            if m1 == Modality.FIXED and m2 == Modality.MOVABLE:
+                return s2 != (s1 - 1) % 12
+            if m1 == Modality.DUAL and m2 == Modality.DUAL:
+                return s1 != s2
+            return False
+            
+        aspect_score_a = 0
+        aspect_score_b = 0
+        for p in chart.planets:
+            if p.sign_number != sign_a and sign_aspects_sign(p.sign_number, sign_a):
+                if p.name in [Planet.JUPITER, Planet.MERCURY, lord_a_name]:
+                    aspect_score_a += 1
+            if p.sign_number != sign_b and sign_aspects_sign(p.sign_number, sign_b):
+                if p.name in [Planet.JUPITER, Planet.MERCURY, lord_b_name]:
+                    aspect_score_b += 1
+                    
+        if aspect_score_a != aspect_score_b:
+            return 1 if aspect_score_a > aspect_score_b else -1
+            
+        # 4. Compare degrees of sign lords in their signs
+        lord_a_obj = chart.get_planet(lord_a_name)
+        lord_b_obj = chart.get_planet(lord_b_name)
+        
+        deg_a = lord_a_obj.degree_in_sign if lord_a_obj else 0.0
+        deg_b = lord_b_obj.degree_in_sign if lord_b_obj else 0.0
+        
+        if deg_a != deg_b:
+            return 1 if deg_a > deg_b else -1
+            
+        return 0
+
+    def _get_jaimini_sign_lord(self, chart: Chart, sign_num: int) -> str:
+        from jyotisha.constants import SIGN_LORDS, Sign, Planet
+        default_lord = SIGN_LORDS[Sign(sign_num)].value
+        
+        if sign_num == 7: # Scorpio
+            p1 = chart.get_planet("Mars")
+            p2 = chart.get_planet("Ketu")
+            if p1 and p2:
+                if p1.sign_number == 7 and p2.sign_number != 7:
+                    return "Ketu"
+                elif p2.sign_number == 7 and p1.sign_number != 7:
+                    return "Mars"
+                else:
+                    planets_with_mars = len([p for p in chart.planets if p.sign_number == p1.sign_number])
+                    planets_with_ketu = len([p for p in chart.planets if p.sign_number == p2.sign_number])
+                    if planets_with_mars != planets_with_ketu:
+                        return "Mars" if planets_with_mars > planets_with_ketu else "Ketu"
+                    return "Mars" if p1.degree_in_sign >= p2.degree_in_sign else "Ketu"
+        elif sign_num == 10: # Aquarius
+            p1 = chart.get_planet("Saturn")
+            p2 = chart.get_planet("Rahu")
+            if p1 and p2:
+                if p1.sign_number == 10 and p2.sign_number != 10:
+                    return "Rahu"
+                elif p2.sign_number == 10 and p1.sign_number != 10:
+                    return "Saturn"
+                else:
+                    planets_with_saturn = len([p for p in chart.planets if p.sign_number == p1.sign_number])
+                    planets_with_rahu = len([p for p in chart.planets if p.sign_number == p2.sign_number])
+                    if planets_with_saturn != planets_with_rahu:
+                        return "Saturn" if planets_with_saturn > planets_with_rahu else "Rahu"
+                    return "Saturn" if p1.degree_in_sign >= p2.degree_in_sign else "Rahu"
+        elif sign_num == 11: # Pisces
+            p1 = chart.get_planet("Jupiter")
+            p2 = chart.get_planet("Ketu")
+            if p1 and p2:
+                if p1.sign_number == 11 and p2.sign_number != 11:
+                    return "Ketu"
+                elif p2.sign_number == 11 and p1.sign_number != 11:
+                    return "Jupiter"
+                else:
+                    planets_with_jup = len([p for p in chart.planets if p.sign_number == p1.sign_number])
+                    planets_with_ketu = len([p for p in chart.planets if p.sign_number == p2.sign_number])
+                    if planets_with_jup != planets_with_ketu:
+                        return "Jupiter" if planets_with_jup > planets_with_ketu else "Ketu"
+                    return "Jupiter" if p1.degree_in_sign >= p2.degree_in_sign else "Ketu"
+                    
+        return default_lord
+
+    def _get_exalt_deb_adjustment(self, lord_name: str, lord_sign: int) -> int:
+        exalt_signs = {
+            "Sun": 0, "Moon": 1, "Mars": 9, "Mercury": 5, "Jupiter": 3, "Venus": 11, "Saturn": 6, "Rahu": 1, "Ketu": 7
+        }
+        deb_signs = {
+            "Sun": 6, "Moon": 7, "Mars": 3, "Mercury": 11, "Jupiter": 9, "Venus": 5, "Saturn": 0, "Rahu": 7, "Ketu": 1
+        }
+        if exalt_signs.get(lord_name) == lord_sign:
+            return 1
+        if deb_signs.get(lord_name) == lord_sign:
+            return -1
+        return 0
+
     def compute_narayana_dasha(self, chart: Chart) -> DashaTimeline:
         """
         Compute Narayana Dasha.
         Advanced Jaimini sign-based dasha.
-        Currently a simplified placeholder (uses Chara Dasha logic as a base).
-        Full implementation requires Chara Bala (sign strength) to determine
-        starting sign (Ascendant vs 7th) and direction.
+        Determines the stronger sign between Lagna and 7th house,
+        direction based on 9th from starting sign (with Saturn/Ketu overrides),
+        and applies progression rules by modality (Chara, Sthira, Dvisvabhava).
         """
-        # For now, fallback to Chara Dasha logic, but label it Narayana
-        # as a placeholder for the advanced implementation.
-        base_chara = self.compute_chara_dasha(chart)
-        base_chara.system = "Narayana (Simplified)"
-        return base_chara
+        if chart.birth_event is None:
+            raise ValueError("Chart has no birth event data")
+            
+        asc_sign_num = chart.ascendant.sign_number
+        desc_sign_num = (asc_sign_num + 6) % 12
+        
+        # Determine starting sign (stronger of 1st and 7th)
+        comp = self._compare_jaimini_sign_strength(chart, asc_sign_num, desc_sign_num)
+        start_sign = asc_sign_num if comp >= 0 else desc_sign_num
+        
+        # Footedness lists
+        odd_footed = [0, 1, 2, 6, 7, 8]
+        even_footed = [3, 4, 5, 9, 10, 11]
+        
+        # Find 9th house from start_sign
+        if start_sign in odd_footed:
+            ninth_house = (start_sign + 8) % 12
+        else:
+            ninth_house = (start_sign - 8) % 12
+            
+        # Direction determined by 9th house footedness
+        dir_val = 1 if ninth_house in odd_footed else -1
+        
+        # Planet-based overrides
+        saturn_in_start = any(p.name == Planet.SATURN and p.sign_number == start_sign for p in chart.planets)
+        ketu_in_start = any(p.name == Planet.KETU and p.sign_number == start_sign for p in chart.planets)
+        
+        if saturn_in_start:
+            dir_val = 1
+        elif ketu_in_start:
+            dir_val = -dir_val
+            
+        # Modality sequence
+        modality = start_sign % 3
+        sequence = []
+        if modality == 0:  # Chara (Movable)
+            sequence = [(start_sign + k * dir_val) % 12 for k in range(12)]
+        elif modality == 1:  # Sthira (Fixed)
+            sequence = [(start_sign + 5 * k * dir_val) % 12 for k in range(12)]
+        else:  # Dvisvabhava (Dual)
+            offsets = [0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11]
+            sequence = [(start_sign + offsets[k] * dir_val) % 12 for k in range(12)]
+            
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+        from jyotisha.constants import SIGN_NAMES
+        
+        for sign_num in sequence:
+            sign_name = SIGN_NAMES[sign_num]
+            lord_name = self._get_jaimini_sign_lord(chart, sign_num)
+            lord_planet = chart.get_planet(lord_name)
+            
+            if lord_planet is None or lord_planet.sign_number == sign_num:
+                years = 12
+            else:
+                lord_sign_num = lord_planet.sign_number
+                sign_is_odd_footed = sign_num in odd_footed
+                
+                if sign_is_odd_footed:
+                    count = ((lord_sign_num - sign_num) % 12) + 1
+                else:
+                    count = ((sign_num - lord_sign_num) % 12) + 1
+                    
+                years = count - 1
+                if years == 0:
+                    years = 12
+                else:
+                    # Apply exaltation/debilitation adjustment
+                    adj = self._get_exalt_deb_adjustment(lord_name, lord_sign_num)
+                    years = max(1, min(12, years + adj))
+                    
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+            
+            period = DashaPeriod(
+                lord=sign_name,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=float(years),
+                is_balance=False,
+                sub_periods=[],
+            )
+            timeline.append(period)
+            current_jd = end_jd
+            
+        return DashaTimeline(
+            system="Narayana Dasha",
+            birth_nakshatra=chart.ascendant.sign,
+            birth_nakshatra_lord=SIGN_NAMES[asc_sign_num],
+            balance_at_birth={},
+            timeline=timeline
+        )
+
+    def get_28_nakshatra_info(self, longitude: float) -> tuple[int, float]:
+        """
+        Returns the 28-nakshatra index (0 to 27) and the fraction elapsed (0.0 to 1.0)
+        for a given sidereal longitude.
+        Includes Abhijit at index 21 (between Uttara Ashadha 20 and Shravana 22).
+        """
+        lon = float(longitude) % 360.0
+        if lon < 266.666667:
+            span = 360.0 / 27.0
+            idx = int(lon / span)
+            elapsed = lon % span
+            return idx, elapsed / span
+        elif lon < 276.666667:
+            # Uttara Ashadha (reduced span)
+            span = 10.0
+            elapsed = lon - 266.666667
+            return 20, elapsed / span
+        elif lon < 280.888889:
+            # Abhijit
+            span = 4.222222
+            elapsed = lon - 276.666667
+            return 21, elapsed / span
+        elif lon < 293.333333:
+            # Shravana (reduced span)
+            span = 12.444444
+            elapsed = lon - 280.888889
+            return 22, elapsed / span
+        else:
+            offset_lon = lon - 293.333333
+            span = 360.0 / 27.0
+            sub_idx = int(offset_lon / span)
+            idx = 23 + sub_idx
+            elapsed = offset_lon % span
+            return idx, elapsed / span
+
+    def compute_ashtottari_dasha(self, chart: Chart, levels: int = 2) -> DashaTimeline:
+        """
+        Compute Ashtottari Dasha (108 years).
+        Uses 28 nakshatras (including Abhijit).
+        Ketu is excluded.
+        Starts from Ardra if any planet is in Lagna, else Krittika.
+        """
+        moon = chart.get_planet("Moon")
+        if moon is None or chart.birth_event is None:
+            raise ValueError("Moon or birth event missing")
+            
+        planet_in_lagna = any(p.house == 1 for p in chart.planets)
+        start_nak_idx = 5 if planet_in_lagna else 2 # 0-indexed (Ardra=5, Krittika=2)
+        
+        moon_nak_idx, fraction = self.get_28_nakshatra_info(moon.longitude)
+        count = (moon_nak_idx - start_nak_idx) % 28
+        
+        sizes = [4, 3, 4, 3, 4, 3, 4, 3]
+        planets_order = ["Sun", "Moon", "Mars", "Mercury", "Saturn", "Jupiter", "Rahu", "Venus"]
+        durations = {"Sun": 6, "Moon": 15, "Mars": 8, "Mercury": 17, "Saturn": 10, "Jupiter": 19, "Rahu": 12, "Venus": 21}
+        
+        accum = 0
+        starting_planet_idx = 0
+        for p_idx, size in enumerate(sizes):
+            if accum <= count < accum + size:
+                starting_planet_idx = p_idx
+                break
+            accum += size
+            
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+        
+        for cycle_offset in range(16):
+            idx = (starting_planet_idx + cycle_offset) % 8
+            lord = planets_order[idx]
+            total_years = durations[lord]
+            
+            if cycle_offset == 0:
+                years = total_years * (1.0 - fraction)
+                is_balance = True
+            else:
+                years = float(total_years)
+                is_balance = False
+                
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+            
+            sub_periods = []
+            if levels >= 2:
+                sub_periods = self._compute_ashtottari_sub_periods(
+                    lord, years, current_jd, levels
+                )
+                
+            period = DashaPeriod(
+                lord=lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(years, 4),
+                is_balance=is_balance,
+                sub_periods=sub_periods,
+            )
+            timeline.append(period)
+            current_jd = end_jd
+            
+        from jyotisha.constants import NAKSHATRA_NAMES
+        birth_nak_name = "Abhijit" if moon_nak_idx == 21 else NAKSHATRA_NAMES[moon_nak_idx if moon_nak_idx < 21 else moon_nak_idx - 1]
+        
+        return DashaTimeline(
+            system="Ashtottari",
+            birth_nakshatra=birth_nak_name,
+            birth_nakshatra_lord=planets_order[starting_planet_idx],
+            balance_at_birth={
+                "lord": planets_order[starting_planet_idx],
+                "remaining_years": round(durations[planets_order[starting_planet_idx]] * (1.0 - fraction), 4),
+            },
+            timeline=timeline
+        )
+
+    def _compute_ashtottari_sub_periods(
+        self,
+        parent_lord: str,
+        parent_years: float,
+        start_jd: float,
+        max_level: int = 2,
+    ) -> list[DashaPeriod]:
+        planets_order = ["Sun", "Moon", "Mars", "Mercury", "Saturn", "Jupiter", "Rahu", "Venus"]
+        durations = {"Sun": 6, "Moon": 15, "Mars": 8, "Mercury": 17, "Saturn": 10, "Jupiter": 19, "Rahu": 12, "Venus": 21}
+        
+        parent_idx = planets_order.index(parent_lord)
+        sub_periods = []
+        current_jd = start_jd
+        
+        for i in range(8):
+            sub_lord = planets_order[(parent_idx + i) % 8]
+            sub_lord_years = durations[sub_lord]
+            
+            sub_years = (sub_lord_years * parent_years) / 108.0
+            sub_days = sub_years * self.DAYS_PER_YEAR
+            end_jd = current_jd + sub_days
+            
+            sub_periods.append(DashaPeriod(
+                lord=sub_lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(sub_years, 4),
+                sub_periods=[],
+            ))
+            current_jd = end_jd
+            
+        return sub_periods
+
+    def compute_dwisaptati_dasha(self, chart: Chart, levels: int = 2) -> DashaTimeline:
+        """
+        Compute Dwisaptati Dasha (72 years).
+        8 planets (excluding Ketu), each 9 years.
+        Starts from Mula.
+        """
+        moon = chart.get_planet("Moon")
+        if moon is None or chart.birth_event is None:
+            raise ValueError("Moon or birth event missing")
+            
+        moon_nak_idx = moon.nakshatra_number
+        degree_in_nakshatra = moon.longitude % NAKSHATRA_SPAN
+        fraction = degree_in_nakshatra / NAKSHATRA_SPAN
+        
+        # Mula is the 19th nakshatra (index 18)
+        count = (moon_nak_idx - 18) % 27 + 1
+        starting_planet_idx = (count - 1) % 8
+        
+        planets_order = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu"]
+        
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+        
+        for cycle_offset in range(16):
+            idx = (starting_planet_idx + cycle_offset) % 8
+            lord = planets_order[idx]
+            total_years = 9.0
+            
+            if cycle_offset == 0:
+                years = total_years * (1.0 - fraction)
+                is_balance = True
+            else:
+                years = float(total_years)
+                is_balance = False
+                
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+            
+            sub_periods = []
+            if levels >= 2:
+                sub_periods = self._compute_dwisaptati_sub_periods(
+                    lord, years, current_jd
+                )
+                
+            period = DashaPeriod(
+                lord=lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(years, 4),
+                is_balance=is_balance,
+                sub_periods=sub_periods,
+            )
+            timeline.append(period)
+            current_jd = end_jd
+            
+        return DashaTimeline(
+            system="Dwisaptati",
+            birth_nakshatra=moon.nakshatra,
+            birth_nakshatra_lord=planets_order[starting_planet_idx],
+            balance_at_birth={
+                "lord": planets_order[starting_planet_idx],
+                "remaining_years": round(9.0 * (1.0 - fraction), 4),
+            },
+            timeline=timeline
+        )
+
+    def _compute_dwisaptati_sub_periods(
+        self,
+        parent_lord: str,
+        parent_years: float,
+        start_jd: float,
+    ) -> list[DashaPeriod]:
+        planets_order = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu"]
+        parent_idx = planets_order.index(parent_lord)
+        sub_periods = []
+        current_jd = start_jd
+        
+        for i in range(8):
+            sub_lord = planets_order[(parent_idx + i) % 8]
+            sub_years = parent_years / 8.0
+            sub_days = sub_years * self.DAYS_PER_YEAR
+            end_jd = current_jd + sub_days
+            
+            sub_periods.append(DashaPeriod(
+                lord=sub_lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(sub_years, 4),
+                sub_periods=[],
+            ))
+            current_jd = end_jd
+            
+        return sub_periods
+
+    def compute_shodashottari_dasha(self, chart: Chart, levels: int = 2) -> DashaTimeline:
+        """
+        Compute Shodashottari Dasha (116 years).
+        9 planets (including Ketu), starting from Pushya.
+        """
+        moon = chart.get_planet("Moon")
+        if moon is None or chart.birth_event is None:
+            raise ValueError("Moon or birth event missing")
+            
+        moon_nak_idx = moon.nakshatra_number
+        degree_in_nakshatra = moon.longitude % NAKSHATRA_SPAN
+        fraction = degree_in_nakshatra / NAKSHATRA_SPAN
+        
+        # Pushya is the 8th nakshatra (index 7)
+        count = (moon_nak_idx - 7) % 27 + 1
+        starting_planet_idx = (count - 1) // 3
+        
+        planets_order = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]
+        durations = {"Sun": 11, "Moon": 9, "Mars": 8, "Mercury": 9, "Jupiter": 10, "Venus": 21, "Saturn": 12, "Rahu": 18, "Ketu": 18}
+        
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+        
+        for cycle_offset in range(18): # 18 periods covers 2 full cycles
+            idx = (starting_planet_idx + cycle_offset) % 9
+            lord = planets_order[idx]
+            total_years = durations[lord]
+            
+            if cycle_offset == 0:
+                years = total_years * (1.0 - fraction)
+                is_balance = True
+            else:
+                years = float(total_years)
+                is_balance = False
+                
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+            
+            sub_periods = []
+            if levels >= 2:
+                sub_periods = self._compute_shodashottari_sub_periods(
+                    lord, years, current_jd
+                )
+                
+            period = DashaPeriod(
+                lord=lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(years, 4),
+                is_balance=is_balance,
+                sub_periods=sub_periods,
+            )
+            timeline.append(period)
+            current_jd = end_jd
+            
+        return DashaTimeline(
+            system="Shodashottari",
+            birth_nakshatra=moon.nakshatra,
+            birth_nakshatra_lord=planets_order[starting_planet_idx],
+            balance_at_birth={
+                "lord": planets_order[starting_planet_idx],
+                "remaining_years": round(durations[planets_order[starting_planet_idx]] * (1.0 - fraction), 4),
+            },
+            timeline=timeline
+        )
+
+    def _compute_shodashottari_sub_periods(
+        self,
+        parent_lord: str,
+        parent_years: float,
+        start_jd: float,
+    ) -> list[DashaPeriod]:
+        planets_order = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]
+        durations = {"Sun": 11, "Moon": 9, "Mars": 8, "Mercury": 9, "Jupiter": 10, "Venus": 21, "Saturn": 12, "Rahu": 18, "Ketu": 18}
+        parent_idx = planets_order.index(parent_lord)
+        sub_periods = []
+        current_jd = start_jd
+        
+        for i in range(9):
+            sub_lord = planets_order[(parent_idx + i) % 9]
+            sub_lord_years = durations[sub_lord]
+            
+            sub_years = (sub_lord_years * parent_years) / 116.0
+            sub_days = sub_years * self.DAYS_PER_YEAR
+            end_jd = current_jd + sub_days
+            
+            sub_periods.append(DashaPeriod(
+                lord=sub_lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(sub_years, 4),
+                sub_periods=[],
+            ))
+            current_jd = end_jd
+            
+        return sub_periods
+
+    def compute_panchottari_dasha(self, chart: Chart, levels: int = 2) -> DashaTimeline:
+        """
+        Compute Panchottari Dasha (105 years).
+        7 planets (excluding Rahu & Ketu), starting from Anuradha.
+        """
+        moon = chart.get_planet("Moon")
+        if moon is None or chart.birth_event is None:
+            raise ValueError("Moon or birth event missing")
+            
+        moon_nak_idx = moon.nakshatra_number
+        degree_in_nakshatra = moon.longitude % NAKSHATRA_SPAN
+        fraction = degree_in_nakshatra / NAKSHATRA_SPAN
+        
+        # Anuradha is the 17th nakshatra (index 16)
+        count = (moon_nak_idx - 16) % 27 + 1
+        starting_planet_idx = (count - 1) % 7
+        
+        planets_order = ["Sun", "Mercury", "Saturn", "Mars", "Venus", "Moon", "Jupiter"]
+        durations = {"Sun": 12, "Mercury": 13, "Saturn": 14, "Mars": 15, "Venus": 16, "Moon": 17, "Jupiter": 18}
+        
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+        
+        for cycle_offset in range(14): # covers 2 cycles
+            idx = (starting_planet_idx + cycle_offset) % 7
+            lord = planets_order[idx]
+            total_years = durations[lord]
+            
+            if cycle_offset == 0:
+                years = total_years * (1.0 - fraction)
+                is_balance = True
+            else:
+                years = float(total_years)
+                is_balance = False
+                
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+            
+            sub_periods = []
+            if levels >= 2:
+                sub_periods = self._compute_panchottari_sub_periods(
+                    lord, years, current_jd
+                )
+                
+            period = DashaPeriod(
+                lord=lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(years, 4),
+                is_balance=is_balance,
+                sub_periods=sub_periods,
+            )
+            timeline.append(period)
+            current_jd = end_jd
+            
+        return DashaTimeline(
+            system="Panchottari",
+            birth_nakshatra=moon.nakshatra,
+            birth_nakshatra_lord=planets_order[starting_planet_idx],
+            balance_at_birth={
+                "lord": planets_order[starting_planet_idx],
+                "remaining_years": round(durations[planets_order[starting_planet_idx]] * (1.0 - fraction), 4),
+            },
+            timeline=timeline
+        )
+
+    def _compute_panchottari_sub_periods(
+        self,
+        parent_lord: str,
+        parent_years: float,
+        start_jd: float,
+    ) -> list[DashaPeriod]:
+        planets_order = ["Sun", "Mercury", "Saturn", "Mars", "Venus", "Moon", "Jupiter"]
+        durations = {"Sun": 12, "Mercury": 13, "Saturn": 14, "Mars": 15, "Venus": 16, "Moon": 17, "Jupiter": 18}
+        parent_idx = planets_order.index(parent_lord)
+        sub_periods = []
+        current_jd = start_jd
+        
+        for i in range(7):
+            sub_lord = planets_order[(parent_idx + i) % 7]
+            sub_lord_years = durations[sub_lord]
+            
+            sub_years = (sub_lord_years * parent_years) / 105.0
+            sub_days = sub_years * self.DAYS_PER_YEAR
+            end_jd = current_jd + sub_days
+            
+            sub_periods.append(DashaPeriod(
+                lord=sub_lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(sub_years, 4),
+                sub_periods=[],
+            ))
+            current_jd = end_jd
+            
+        return sub_periods
+
+    def compute_naisargika_dasha(self, chart: Chart) -> DashaTimeline:
+        """
+        Compute Naisargika Dasha (Natural life stages, 120 years).
+        Universal fixed timeline:
+        - Moon: 1 year (Age 0-1)
+        - Mars: 2 years (Age 1-3)
+        - Mercury: 9 years (Age 3-12)
+        - Venus: 20 years (Age 12-32)
+        - Jupiter: 18 years (Age 32-50)
+        - Sun: 20 years (Age 50-70)
+        - Saturn: 50 years (Age 70-120)
+        """
+        if chart.birth_event is None:
+            raise ValueError("Birth event missing")
+            
+        planets_order = ["Moon", "Mars", "Mercury", "Venus", "Jupiter", "Sun", "Saturn"]
+        durations = [1.0, 2.0, 9.0, 20.0, 18.0, 20.0, 50.0]
+        
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+        
+        for idx, lord in enumerate(planets_order):
+            years = durations[idx]
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+            
+            period = DashaPeriod(
+                lord=lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=float(years),
+                is_balance=False,
+                sub_periods=[],
+            )
+            timeline.append(period)
+            current_jd = end_jd
+            
+        return DashaTimeline(
+            system="Naisargika",
+            birth_nakshatra=chart.ascendant.sign,
+            birth_nakshatra_lord="Ascendant",
+            balance_at_birth={},
+            timeline=timeline
+        )
+
+    def compute_kalachakra_dasha(self, chart: Chart, levels: int = 2) -> DashaTimeline:
+        """
+        Compute Kalachakra Dasha.
+        Determines the Savya/Apasavya cycle from Moon's nakshatra,
+        sets the sequence of 9 signs based on nakshatra pada,
+        and computes durations and sub-periods (bhuktis).
+        """
+        moon = chart.get_planet("Moon")
+        if moon is None or chart.birth_event is None:
+            raise ValueError("Moon or birth event missing")
+
+        from jyotisha.constants import NAKSHATRA_SPAN, NAKSHATRA_NAMES
+        
+        moon_longitude = moon.longitude
+        nak_idx = int(moon_longitude / NAKSHATRA_SPAN)
+        if nak_idx >= 27:
+            nak_idx = 26
+            
+        deg_in_nak = moon_longitude % NAKSHATRA_SPAN
+        pada_span = NAKSHATRA_SPAN / 4.0
+        pada_idx = int(deg_in_nak / pada_span)
+        if pada_idx >= 4:
+            pada_idx = 3
+        pada_num = pada_idx + 1
+        fraction = (deg_in_nak % pada_span) / pada_span
+
+        is_savya = (nak_idx // 3) % 2 == 0
+
+        SAVYA_SEQUENCES = {
+            1: ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius"],
+            2: ["Capricorn", "Aquarius", "Pisces", "Scorpio", "Libra", "Virgo", "Cancer", "Leo", "Gemini"],
+            3: ["Taurus", "Aries", "Pisces", "Aquarius", "Capricorn", "Sagittarius", "Aries", "Taurus", "Gemini"],
+            4: ["Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"],
+        }
+
+        APASAVYA_SEQUENCES = {
+            1: ["Pisces", "Aquarius", "Capricorn", "Sagittarius", "Scorpio", "Libra", "Virgo", "Leo", "Cancer"],
+            2: ["Gemini", "Taurus", "Aries", "Sagittarius", "Capricorn", "Aquarius", "Pisces", "Aries", "Taurus"],
+            3: ["Gemini", "Leo", "Cancer", "Virgo", "Libra", "Scorpio", "Pisces", "Aquarius", "Capricorn"],
+            4: ["Sagittarius", "Scorpio", "Libra", "Virgo", "Leo", "Cancer", "Gemini", "Taurus", "Aries"],
+        }
+
+        KALACHAKRA_YEARS = {
+            "Aries": 7.0,
+            "Taurus": 16.0,
+            "Gemini": 9.0,
+            "Cancer": 21.0,
+            "Leo": 5.0,
+            "Virgo": 9.0,
+            "Libra": 16.0,
+            "Scorpio": 7.0,
+            "Sagittarius": 10.0,
+            "Capricorn": 4.0,
+            "Aquarius": 4.0,
+            "Pisces": 10.0,
+        }
+
+        sequence = SAVYA_SEQUENCES[pada_num] if is_savya else APASAVYA_SEQUENCES[pada_num]
+        paramayush = sum(KALACHAKRA_YEARS[s] for s in sequence)
+
+        timeline = []
+        current_jd = chart.birth_event.julian_day
+
+        for cycle_offset in range(18):
+            idx = cycle_offset % 9
+            lord = sequence[idx]
+            total_years = KALACHAKRA_YEARS[lord]
+
+            if cycle_offset == 0:
+                years = total_years * (1.0 - fraction)
+                is_balance = True
+            else:
+                years = float(total_years)
+                is_balance = False
+
+            days = years * self.DAYS_PER_YEAR
+            end_jd = current_jd + days
+
+            sub_periods = []
+            if levels >= 2:
+                sub_periods = self._compute_kalachakra_sub_periods(
+                    sequence=sequence,
+                    parent_idx=idx,
+                    parent_years=years,
+                    paramayush=paramayush,
+                    start_jd=current_jd,
+                    kalachakra_years=KALACHAKRA_YEARS
+                )
+
+            period = DashaPeriod(
+                lord=lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(years, 4),
+                is_balance=is_balance,
+                sub_periods=sub_periods,
+            )
+            timeline.append(period)
+            current_jd = end_jd
+
+        starting_rashi = sequence[0]
+        return DashaTimeline(
+            system="Kalachakra",
+            birth_nakshatra=NAKSHATRA_NAMES[nak_idx],
+            birth_nakshatra_lord=starting_rashi,
+            balance_at_birth={
+                "lord": starting_rashi,
+                "remaining_years": round(KALACHAKRA_YEARS[starting_rashi] * (1.0 - fraction), 4),
+                "total_years": KALACHAKRA_YEARS[starting_rashi],
+                "elapsed_fraction": round(fraction, 4),
+            },
+            timeline=timeline,
+        )
+
+    def _compute_kalachakra_sub_periods(
+        self,
+        sequence: list[str],
+        parent_idx: int,
+        parent_years: float,
+        paramayush: float,
+        start_jd: float,
+        kalachakra_years: dict[str, float],
+    ) -> list[DashaPeriod]:
+        sub_periods = []
+        current_jd = start_jd
+
+        for i in range(9):
+            sub_lord = sequence[(parent_idx + i) % 9]
+            sub_lord_years = kalachakra_years[sub_lord]
+
+            sub_years = (sub_lord_years * parent_years) / paramayush
+            sub_days = sub_years * self.DAYS_PER_YEAR
+            end_jd = current_jd + sub_days
+
+            sub_periods.append(DashaPeriod(
+                lord=sub_lord,
+                start_date=self._jd_to_date(current_jd),
+                end_date=self._jd_to_date(end_jd),
+                start_jd=round(current_jd, 6),
+                end_jd=round(end_jd, 6),
+                years=round(sub_years, 4),
+                sub_periods=[],
+            ))
+            current_jd = end_jd
+
+        return sub_periods
+
+    def compute_tara_dasha(self, chart: Chart, levels: int = 2) -> DashaTimeline:
+        """
+        Compute Tara Dasha (120 years).
+        Calculated from Lagna's nakshatra (Ascendant's longitude)
+        using the Vimshottari sequence.
+        """
+        if chart.birth_event is None:
+            raise ValueError("Chart has no birth event data")
+
+        timeline = self.compute_vimshottari(
+            moon_longitude=chart.ascendant.longitude,
+            birth_jd=chart.birth_event.julian_day,
+            levels=levels,
+        )
+        timeline.system = "Tara"
+        return timeline
+
 
     def get_current_dasha(
         self,

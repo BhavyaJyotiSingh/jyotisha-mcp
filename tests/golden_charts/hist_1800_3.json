@@ -1,0 +1,18 @@
+{
+  "name": "hist_1800_3",
+  "datetime_str": "1800-03-25T17:49:00",
+  "latitude": -27.42394884795587,
+  "longitude": 38.34019745936817,
+  "expected_ascendant": "Virgo",
+  "expected_planets": {
+    "Sun": "Pisces",
+    "Moon": "Pisces",
+    "Mercury": "Aries",
+    "Venus": "Aquarius",
+    "Mars": "Capricorn",
+    "Jupiter": "Gemini",
+    "Saturn": "Cancer",
+    "Rahu": "Aries",
+    "Ketu": "Libra"
+  }
+}

@@ -62,6 +62,8 @@ class CuspHouseSystem(HouseSystemStrategy):
     Each cusp exactly marks the start (Bhava Arambha) of the house.
     """
     def build_houses(self, asc_sign_num: int, cusps: List[float]) -> List[House]:
+        if len(cusps) != 12:
+            raise ValueError(f"Cusp-based houses require 12 cusps, got {len(cusps)}")
         houses = []
         for i in range(12):
             cusp_lon = cusps[i]
@@ -161,7 +163,9 @@ class SripatiHouseSystem(BhavaChalitHouseSystem):
     Trisects the arc between Ascendant, IC, Descendant, and MC.
     Uses Bhava Chalit mapping where cusps are Bhava Madhya (midpoints).
     """
-    pass
+    # Swiss Ephemeris Porphyry ("O") cusps contain the quadrant
+    # trisections. Sripati assignment treats them as bhava madhyas, so the
+    # inherited midpoint-boundary construction is intentional.
 
 class PlacidusHouseSystem(CuspHouseSystem):
     """
@@ -172,13 +176,37 @@ class PlacidusHouseSystem(CuspHouseSystem):
     """
     pass
 
+
+class EqualHouseSystem(CuspHouseSystem):
+    """Equal 30-degree houses measured from the Ascendant."""
+
+
+class KochHouseSystem(CuspHouseSystem):
+    """Koch house cusps supplied by Swiss Ephemeris code ``K``."""
+
+
+class CampanusHouseSystem(CuspHouseSystem):
+    """Campanus house cusps supplied by Swiss Ephemeris code ``C``."""
+
+
+class RegiomontanusHouseSystem(CuspHouseSystem):
+    """Regiomontanus house cusps supplied by Swiss Ephemeris code ``R``."""
+
 def get_house_strategy(house_system_code: str) -> HouseSystemStrategy:
     """Factory method to get the correct house strategy."""
-    if house_system_code == "W":
+    code = house_system_code.upper()
+    if code == "W":
         return WholeSignHouseSystem()
-    elif house_system_code in ("B", "O"): # Bhava Chalit / Sripati (Porphyry)
+    if code in ("B", "O"):
         return SripatiHouseSystem()
-    elif house_system_code in ("P", "K"): # Placidus / Koch (KP style)
+    if code == "P":
         return PlacidusHouseSystem()
-    else: # E (Equal) and others
-        return CuspHouseSystem()
+    if code in ("E", "A"):
+        return EqualHouseSystem()
+    if code == "K":
+        return KochHouseSystem()
+    if code == "C":
+        return CampanusHouseSystem()
+    if code == "R":
+        return RegiomontanusHouseSystem()
+    raise ValueError(f"Unsupported house system code: {house_system_code!r}")

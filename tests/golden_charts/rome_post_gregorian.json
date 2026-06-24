@@ -1,0 +1,18 @@
+{
+  "name": "rome_post_gregorian",
+  "datetime_str": "1582-10-15T12:00:00",
+  "latitude": 41.9028,
+  "longitude": 12.4964,
+  "expected_ascendant": "Sagittarius",
+  "expected_planets": {
+    "Sun": "Libra",
+    "Moon": "Taurus",
+    "Mercury": "Virgo",
+    "Venus": "Leo",
+    "Mars": "Gemini",
+    "Jupiter": "Capricorn",
+    "Saturn": "Aquarius",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

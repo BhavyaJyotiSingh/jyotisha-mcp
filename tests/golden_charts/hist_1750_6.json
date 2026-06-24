@@ -1,0 +1,18 @@
+{
+  "name": "hist_1750_6",
+  "datetime_str": "1750-06-01T19:20:00",
+  "latitude": 8.860570802894784,
+  "longitude": -93.15174592298519,
+  "expected_ascendant": "Sagittarius",
+  "expected_planets": {
+    "Sun": "Taurus",
+    "Moon": "Aries",
+    "Mercury": "Gemini",
+    "Venus": "Aries",
+    "Mars": "Gemini",
+    "Jupiter": "Aries",
+    "Saturn": "Scorpio",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

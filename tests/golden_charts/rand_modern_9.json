@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_9",
+  "datetime_str": "1974-08-17T16:10:00",
+  "latitude": -53.17445043255786,
+  "longitude": 2.818258917630658,
+  "expected_ascendant": "Capricorn",
+  "expected_planets": {
+    "Sun": "Leo",
+    "Moon": "Cancer",
+    "Mercury": "Leo",
+    "Venus": "Cancer",
+    "Mars": "Leo",
+    "Jupiter": "Aquarius",
+    "Saturn": "Gemini",
+    "Rahu": "Scorpio",
+    "Ketu": "Taurus"
+  }
+}

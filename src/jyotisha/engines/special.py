@@ -10,7 +10,7 @@ from typing import Optional
 from datetime import timedelta
 
 from jyotisha.models.schemas import Chart, Upagraha, SpecialLagna
-from jyotisha.constants import SIGN_NAMES, SIGN_LORDS, SIGN_MODALITIES, Sign, Planet
+from jyotisha.constants import SIGN_NAMES, SIGN_LORDS, SIGN_MODALITIES, Sign
 from jyotisha.engines.astronomy import AstronomicalEngine
 
 

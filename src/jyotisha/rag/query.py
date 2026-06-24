@@ -5,15 +5,12 @@ Queries the ChromaDB collection for relevant astrological rules.
 """
 
 from __future__ import annotations
+from importlib.util import find_spec
 from typing import Optional
 
-try:
-    import chromadb
-    HAS_CHROMA = True
-except ImportError:
-    HAS_CHROMA = False
-
 from jyotisha.rag.ingestion import RAGIngestion
+
+HAS_CHROMA = find_spec("chromadb") is not None
 
 class RAGQuery:
     """Queries the RAG knowledge base for astrological rules."""

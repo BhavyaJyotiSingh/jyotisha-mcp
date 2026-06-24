@@ -1,6 +1,5 @@
 import pytest
 import json
-import os
 from pathlib import Path
 from jyotisha.engines.chart import ChartEngine
 

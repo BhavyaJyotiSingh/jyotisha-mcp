@@ -148,6 +148,16 @@ class YogaEngine:
             
         return False, set()
 
+    def _resolve_house_lords(self, stmt: str, chart: Chart) -> str:
+        """Resolve House(N).lord in expression to the actual planet name."""
+        matches = re.findall(r"House\(([0-9]+)\)\.lord", stmt)
+        for m in matches:
+            house_num = int(m)
+            lord = chart.get_house_lord(house_num)
+            if lord:
+                stmt = stmt.replace(f"House({m}).lord", lord)
+        return stmt
+
     def _eval_expression(self, expr: str, chart: Chart) -> tuple[bool, set[str]]:
         """
         Evaluate a single string expression.
@@ -157,6 +167,9 @@ class YogaEngine:
         - "Moon.house(2).emptyExcluding(Sun, Rahu, Ketu)"
         """
         involved = set()
+        
+        # Pre-resolve house lords first
+        expr = self._resolve_house_lords(expr, chart)
         
         # Handle simple logical OR at the top level string
         if " OR " in expr:
@@ -228,6 +241,43 @@ class YogaEngine:
                 return True, {planet}
             return False, set()
 
+        # Planet.inTrikona() (houses 5, 9)
+        match = re.match(r"^([a-zA-Z]+)\.inTrikona\(\)$", stmt)
+        if match:
+            planet = match.group(1)
+            p_data = chart.get_planet(planet)
+            if p_data and p_data.house in [5, 9]:
+                return True, {planet}
+            return False, set()
+
+        # Planet.inKendraOrTrikona() (houses 1, 4, 5, 7, 9, 10)
+        match = re.match(r"^([a-zA-Z]+)\.inKendraOrTrikona\(\)$", stmt)
+        if match:
+            planet = match.group(1)
+            p_data = chart.get_planet(planet)
+            if p_data and p_data.house in [1, 4, 5, 7, 9, 10]:
+                return True, {planet}
+            return False, set()
+
+        # Planet.inDussthana() (houses 6, 8, 12)
+        match = re.match(r"^([a-zA-Z]+)\.inDussthana\(\)$", stmt)
+        if match:
+            planet = match.group(1)
+            p_data = chart.get_planet(planet)
+            if p_data and p_data.house in [6, 8, 12]:
+                return True, {planet}
+            return False, set()
+
+        # Planet.inHouse(M)
+        match = re.match(r"^([a-zA-Z]+)\.inHouse\(([0-9]+)\)$", stmt)
+        if match:
+            planet = match.group(1)
+            house_num = int(match.group(2))
+            p_data = chart.get_planet(planet)
+            if p_data and p_data.house == house_num:
+                return True, {planet}
+            return False, set()
+
         # Planet.inKendraFrom(OtherPlanet)
         match = re.match(r"^([a-zA-Z]+)\.inKendraFrom\(([a-zA-Z]+)\)$", stmt)
         if match:
@@ -236,7 +286,6 @@ class YogaEngine:
             p1_data = chart.get_planet(planet1)
             p2_data = chart.get_planet(planet2)
             if p1_data and p2_data:
-                # Relative house position
                 relative_house = ((p1_data.house - p2_data.house) % 12) + 1
                 if relative_house in [1, 4, 7, 10]:
                     return True, {planet1, planet2}
@@ -253,7 +302,6 @@ class YogaEngine:
                 return False, set()
 
             if target == "Benefic":
-                # Check if conjunct any natural benefic
                 for b_name in NATURAL_BENEFICS:
                     b_data = chart.get_planet(b_name.value)
                     if b_data and b_data.house == p1_data.house and b_data.name != planet1:
@@ -304,11 +352,9 @@ class YogaEngine:
             
             if target_house:
                 occupants = set(target_house.planets_in_house)
-                # Remove excluded planets
                 for ex in excluded:
                     occupants.discard(ex)
                 if occupants:
-                    # Condition met: there is at least one planet here not in excluded list
                     return True, {ref_planet}.union(occupants)
             return False, set()
 
@@ -331,11 +377,10 @@ class YogaEngine:
                 for ex in excluded:
                     occupants.discard(ex)
                 if not occupants:
-                    # Condition met: house is empty (ignoring excluded planets)
                     return True, {ref_planet}
             return False, set()
 
-        # House(N).lord.inHouse(M)
+        # House(N).lord.inHouse(M) (kept for backwards compatibility if needed, but resolved by pre-resolve)
         match = re.match(r"^House\(([0-9]+)\)\.lord\.inHouse\(([0-9]+)\)$", stmt)
         if match:
             source_house_num = int(match.group(1))
@@ -349,14 +394,10 @@ class YogaEngine:
                     return True, {lord}
             return False, set()
 
-        # Complex cases (Neechabhanga)
-        
         # DebilitatedPlanet.dispositor.inKendra()
         if stmt == "DebilitatedPlanet.dispositor.inKendra()":
-            # Find any debilitated planet
             for p in chart.planets:
                 if p.dignity.is_debilitated:
-                    # Find its dispositor (lord of its current sign)
                     house = chart.get_house(p.house)
                     if house:
                         dispositor_name = house.lord

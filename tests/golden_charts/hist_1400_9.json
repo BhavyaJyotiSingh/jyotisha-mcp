@@ -1,0 +1,18 @@
+{
+  "name": "hist_1400_9",
+  "datetime_str": "1400-09-13T08:04:00",
+  "latitude": -18.901715641367353,
+  "longitude": 106.29833144041305,
+  "expected_ascendant": "Libra",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Gemini",
+    "Mercury": "Virgo",
+    "Venus": "Leo",
+    "Mars": "Leo",
+    "Jupiter": "Virgo",
+    "Saturn": "Sagittarius",
+    "Rahu": "Virgo",
+    "Ketu": "Pisces"
+  }
+}

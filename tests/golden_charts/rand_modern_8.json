@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_8",
+  "datetime_str": "1907-10-24T17:03:00",
+  "latitude": 29.75706724548769,
+  "longitude": -159.4205017533061,
+  "expected_ascendant": "Aries",
+  "expected_planets": {
+    "Sun": "Libra",
+    "Moon": "Taurus",
+    "Mercury": "Scorpio",
+    "Venus": "Libra",
+    "Mars": "Capricorn",
+    "Jupiter": "Cancer",
+    "Saturn": "Aquarius",
+    "Rahu": "Gemini",
+    "Ketu": "Sagittarius"
+  }
+}

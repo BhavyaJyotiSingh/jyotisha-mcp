@@ -1,0 +1,18 @@
+{
+  "name": "Albert Einstein",
+  "datetime_str": "1879-03-14T11:30:00",
+  "latitude": 48.3984,
+  "longitude": 9.9915,
+  "expected_ascendant": "Gemini",
+  "expected_planets": {
+    "Sun": "Pisces",
+    "Moon": "Scorpio",
+    "Mercury": "Pisces",
+    "Venus": "Pisces",
+    "Mars": "Capricorn",
+    "Jupiter": "Aquarius",
+    "Saturn": "Pisces",
+    "Rahu": "Capricorn",
+    "Ketu": "Cancer"
+  }
+}

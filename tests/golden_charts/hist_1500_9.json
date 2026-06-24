@@ -1,0 +1,18 @@
+{
+  "name": "hist_1500_9",
+  "datetime_str": "1500-09-19T12:23:00",
+  "latitude": -18.067924084271667,
+  "longitude": 119.40902555882647,
+  "expected_ascendant": "Capricorn",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Cancer",
+    "Mercury": "Libra",
+    "Venus": "Libra",
+    "Mars": "Virgo",
+    "Jupiter": "Pisces",
+    "Saturn": "Taurus",
+    "Rahu": "Taurus",
+    "Ketu": "Scorpio"
+  }
+}

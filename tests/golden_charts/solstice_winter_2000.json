@@ -1,0 +1,18 @@
+{
+  "name": "solstice_winter_2000",
+  "datetime_str": "2000-12-21T12:00:00",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Aquarius",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Libra",
+    "Mercury": "Sagittarius",
+    "Venus": "Capricorn",
+    "Mars": "Libra",
+    "Jupiter": "Taurus",
+    "Saturn": "Taurus",
+    "Rahu": "Gemini",
+    "Ketu": "Sagittarius"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "polar_lat_-75_lon_0_m_12",
+  "datetime_str": "2024-12-21T12:00:00",
+  "latitude": -75.0,
+  "longitude": 0.0,
+  "expected_ascendant": "Aquarius",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Leo",
+    "Mercury": "Scorpio",
+    "Venus": "Capricorn",
+    "Mars": "Cancer",
+    "Jupiter": "Taurus",
+    "Saturn": "Aquarius",
+    "Rahu": "Pisces",
+    "Ketu": "Virgo"
+  }
+}

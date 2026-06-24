@@ -1,0 +1,18 @@
+{
+  "name": "Bill Gates",
+  "datetime_str": "1955-10-28T22:00:00",
+  "latitude": 47.6062,
+  "longitude": -122.3321,
+  "expected_ascendant": "Cancer",
+  "expected_planets": {
+    "Sun": "Libra",
+    "Moon": "Pisces",
+    "Mercury": "Virgo",
+    "Venus": "Libra",
+    "Mars": "Virgo",
+    "Jupiter": "Leo",
+    "Saturn": "Libra",
+    "Rahu": "Scorpio",
+    "Ketu": "Taurus"
+  }
+}

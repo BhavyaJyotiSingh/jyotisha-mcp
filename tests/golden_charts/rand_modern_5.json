@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_5",
+  "datetime_str": "2015-01-06T12:00:00",
+  "latitude": 58.237061253567106,
+  "longitude": -84.5268990580253,
+  "expected_ascendant": "Pisces",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Cancer",
+    "Mercury": "Capricorn",
+    "Venus": "Capricorn",
+    "Mars": "Aquarius",
+    "Jupiter": "Cancer",
+    "Saturn": "Scorpio",
+    "Rahu": "Virgo",
+    "Ketu": "Pisces"
+  }
+}

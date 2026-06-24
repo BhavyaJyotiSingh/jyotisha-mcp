@@ -410,6 +410,21 @@ HOUSE_SIGNIFICATIONS = {
     12: ["Loss", "Expenses", "Foreign Lands", "Liberation", "Sleep", "Left Eye"],
 }
 
+BHAVA_KARAKAS = {
+    1: [Planet.SUN],
+    2: [Planet.JUPITER],
+    3: [Planet.MARS],
+    4: [Planet.MOON, Planet.MERCURY],
+    5: [Planet.JUPITER],
+    6: [Planet.MARS, Planet.SATURN],
+    7: [Planet.VENUS],
+    8: [Planet.SATURN],
+    9: [Planet.SUN, Planet.JUPITER],
+    10: [Planet.SUN, Planet.MERCURY, Planet.JUPITER, Planet.SATURN],
+    11: [Planet.JUPITER],
+    12: [Planet.SATURN],
+}
+
 
 # ─────────────────────────────────────────────────────────────
 # Tithi Names (Lunar Days)

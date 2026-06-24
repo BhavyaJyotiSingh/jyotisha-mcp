@@ -1,0 +1,18 @@
+{
+  "name": "equinox_vernal_2012",
+  "datetime_str": "2012-03-20T12:00:00",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Gemini",
+  "expected_planets": {
+    "Sun": "Pisces",
+    "Moon": "Aquarius",
+    "Mercury": "Pisces",
+    "Venus": "Aries",
+    "Mars": "Leo",
+    "Jupiter": "Aries",
+    "Saturn": "Libra",
+    "Rahu": "Scorpio",
+    "Ketu": "Taurus"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_2",
+  "datetime_str": "1935-08-08T02:28:00",
+  "latitude": 36.96266936780431,
+  "longitude": 128.1480812886142,
+  "expected_ascendant": "Gemini",
+  "expected_planets": {
+    "Sun": "Cancer",
+    "Moon": "Libra",
+    "Mercury": "Cancer",
+    "Venus": "Leo",
+    "Mars": "Libra",
+    "Jupiter": "Libra",
+    "Saturn": "Aquarius",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

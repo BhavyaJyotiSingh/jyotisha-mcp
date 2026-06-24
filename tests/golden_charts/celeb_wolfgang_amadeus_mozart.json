@@ -1,0 +1,18 @@
+{
+  "name": "Wolfgang Amadeus Mozart",
+  "datetime_str": "1756-01-27T20:00:00",
+  "latitude": 47.8095,
+  "longitude": 13.055,
+  "expected_ascendant": "Leo",
+  "expected_planets": {
+    "Sun": "Capricorn",
+    "Moon": "Scorpio",
+    "Mercury": "Capricorn",
+    "Venus": "Aquarius",
+    "Mars": "Gemini",
+    "Jupiter": "Virgo",
+    "Saturn": "Capricorn",
+    "Rahu": "Leo",
+    "Ketu": "Aquarius"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "hist_800_3",
+  "datetime_str": "0800-03-21T22:34:00",
+  "latitude": 1.951982096165871,
+  "longitude": -12.189828891875138,
+  "expected_ascendant": "Sagittarius",
+  "expected_planets": {
+    "Sun": "Pisces",
+    "Moon": "Capricorn",
+    "Mercury": "Aries",
+    "Venus": "Taurus",
+    "Mars": "Aries",
+    "Jupiter": "Aquarius",
+    "Saturn": "Leo",
+    "Rahu": "Capricorn",
+    "Ketu": "Cancer"
+  }
+}

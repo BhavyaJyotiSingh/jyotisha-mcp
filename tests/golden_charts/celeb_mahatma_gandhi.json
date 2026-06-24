@@ -1,0 +1,18 @@
+{
+  "name": "Mahatma Gandhi",
+  "datetime_str": "1869-10-02T07:11:00",
+  "latitude": 21.6422,
+  "longitude": 69.6093,
+  "expected_ascendant": "Libra",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Cancer",
+    "Mercury": "Libra",
+    "Venus": "Libra",
+    "Mars": "Libra",
+    "Jupiter": "Aries",
+    "Saturn": "Scorpio",
+    "Rahu": "Cancer",
+    "Ketu": "Capricorn"
+  }
+}

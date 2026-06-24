@@ -1,0 +1,18 @@
+{
+  "name": "hist_1850_9",
+  "datetime_str": "1850-09-03T22:40:00",
+  "latitude": -34.11262331236766,
+  "longitude": -103.82392125352621,
+  "expected_ascendant": "Aries",
+  "expected_planets": {
+    "Sun": "Leo",
+    "Moon": "Cancer",
+    "Mercury": "Virgo",
+    "Venus": "Libra",
+    "Mars": "Virgo",
+    "Jupiter": "Virgo",
+    "Saturn": "Pisces",
+    "Rahu": "Cancer",
+    "Ketu": "Capricorn"
+  }
+}

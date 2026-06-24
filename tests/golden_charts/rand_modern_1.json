@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_1",
+  "datetime_str": "1913-04-07T06:34:00",
+  "latitude": -6.16637426002417,
+  "longitude": -28.122609659614483,
+  "expected_ascendant": "Aries",
+  "expected_planets": {
+    "Sun": "Pisces",
+    "Moon": "Aries",
+    "Mercury": "Pisces",
+    "Venus": "Aries",
+    "Mars": "Aquarius",
+    "Jupiter": "Sagittarius",
+    "Saturn": "Taurus",
+    "Rahu": "Pisces",
+    "Ketu": "Virgo"
+  }
+}

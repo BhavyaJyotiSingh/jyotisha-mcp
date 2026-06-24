@@ -93,6 +93,17 @@ yogas:
     intensity: "medium"
     sources: ["BPHS 37.2-4"]
 
+  - name: "Durudhura Yoga"
+    category: "dhana"
+    conditions:
+      - "Moon.house(2).hasPlanetExcluding(Sun, Rahu, Ketu)"
+      - "Moon.house(12).hasPlanetExcluding(Sun, Rahu, Ketu)"
+    conclusion: "Durudhura Yoga is present."
+    effects:
+      - "Famous, wealthy, charitable, good vehicles and servants"
+    intensity: "high"
+    sources: ["BPHS 37.2-4"]
+
   - name: "Kemadruma Yoga"
     category: "dosha"
     conditions:
@@ -131,8 +142,19 @@ yogas:
     intensity: "medium"
     sources: ["BPHS 37.31"]
 
+  - name: "Ubhayachari Yoga"
+    category: "dhana"
+    conditions:
+      - "Sun.house(2).hasPlanetExcluding(Moon, Rahu, Ketu)"
+      - "Sun.house(12).hasPlanetExcluding(Moon, Rahu, Ketu)"
+    conclusion: "Ubhayachari Yoga is present."
+    effects:
+      - "Equal to a king, very wealthy, popular"
+    intensity: "high"
+    sources: ["BPHS 37.31"]
+
   # ─────────────────────────────────────────────────────────
-  # Specific Wealth / Misfortune Yogas
+  # Specific Wealth / Misfortune / Intellectual Yogas
   # ─────────────────────────────────────────────────────────
   - name: "Chandra-Mangala Yoga"
     category: "dhana"
@@ -144,15 +166,80 @@ yogas:
     intensity: "medium"
     sources: ["BPHS 37.8"]
 
+  - name: "Budhaditya Yoga"
+    category: "intellect"
+    conditions:
+      - "Sun.conjunct(Mercury)"
+    conclusion: "Budhaditya Yoga is present (Sun conjunct Mercury)."
+    effects:
+      - "Highly intelligent, good reputation, administrative skill"
+    intensity: "medium"
+    sources: ["Saravali 35.12"]
+
+  - name: "Saraswati Yoga"
+    category: "intellect"
+    conditions:
+      - "Jupiter.inKendraOrTrikona() OR Jupiter.inHouse(2)"
+      - "Venus.inKendraOrTrikona() OR Venus.inHouse(2)"
+      - "Mercury.inKendraOrTrikona() OR Mercury.inHouse(2)"
+    conclusion: "Saraswati Yoga is present."
+    effects:
+      - "Highly learned in arts/sciences, poetic, wealthy, globally famous"
+    intensity: "high"
+    sources: ["Phaladeepika 6.26"]
+
+  - name: "Dharma-Karma Adhipati Yoga"
+    category: "raja"
+    conditions:
+      - "House(9).lord.conjunct(House(10).lord)"
+    conclusion: "Dharma-Karma Adhipati Yoga is present."
+    effects:
+      - "High status, fame, prosperity, authority"
+    intensity: "very_high"
+    sources: ["BPHS 41.2"]
+
+  - name: "Lakshmi Yoga"
+    category: "dhana"
+    conditions:
+      - "House(9).lord.inKendraOrTrikona()"
+    conclusion: "Lakshmi Yoga is present."
+    effects:
+      - "Highly wealthy, handsome, noble, respected by society"
+    intensity: "very_high"
+    sources: ["BPHS 42.5"]
+
+  # ─────────────────────────────────────────────────────────
+  # Viparita Raja Yogas
+  # ─────────────────────────────────────────────────────────
   - name: "Viparita Raja Yoga (Harsha)"
     category: "raja"
     conditions:
-      - "House(6).lord.inHouse(6) OR House(6).lord.inHouse(8) OR House(6).lord.inHouse(12)"
+      - "House(6).lord.inDussthana()"
     conclusion: "Viparita Raja Yoga (Harsha) is present."
     effects:
       - "Victory over enemies, sudden gains through crisis"
     intensity: "high"
     sources: ["BPHS 40.14"]
+
+  - name: "Viparita Raja Yoga (Sarala)"
+    category: "raja"
+    conditions:
+      - "House(8).lord.inDussthana()"
+    conclusion: "Viparita Raja Yoga (Sarala) is present."
+    effects:
+      - "Long-lived, wealthy, success after struggle, defeats enemies"
+    intensity: "high"
+    sources: ["BPHS 40.15"]
+
+  - name: "Viparita Raja Yoga (Vimala)"
+    category: "raja"
+    conditions:
+      - "House(12).lord.inDussthana()"
+    conclusion: "Viparita Raja Yoga (Vimala) is present."
+    effects:
+      - "Saves money, independent character, honorable profession"
+    intensity: "high"
+    sources: ["BPHS 40.16"]
 
   - name: "Neechabhanga Raja Yoga"
     category: "raja"

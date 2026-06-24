@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_10",
+  "datetime_str": "2008-03-03T19:04:00",
+  "latitude": 21.025506432490815,
+  "longitude": -95.32659779966477,
+  "expected_ascendant": "Leo",
+  "expected_planets": {
+    "Sun": "Aquarius",
+    "Moon": "Capricorn",
+    "Mercury": "Capricorn",
+    "Venus": "Capricorn",
+    "Mars": "Gemini",
+    "Jupiter": "Sagittarius",
+    "Saturn": "Leo",
+    "Rahu": "Aquarius",
+    "Ketu": "Leo"
+  }
+}

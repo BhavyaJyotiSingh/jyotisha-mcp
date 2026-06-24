@@ -1,0 +1,18 @@
+{
+  "name": "equinox_autumnal_2028",
+  "datetime_str": "2028-09-22T12:00:00",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Scorpio",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Libra",
+    "Mercury": "Virgo",
+    "Venus": "Cancer",
+    "Mars": "Cancer",
+    "Jupiter": "Virgo",
+    "Saturn": "Aries",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "hist_1850_6",
+  "datetime_str": "1850-06-01T18:35:00",
+  "latitude": -16.9885267403423,
+  "longitude": -67.14782773162572,
+  "expected_ascendant": "Sagittarius",
+  "expected_planets": {
+    "Sun": "Taurus",
+    "Moon": "Aquarius",
+    "Mercury": "Gemini",
+    "Venus": "Gemini",
+    "Mars": "Cancer",
+    "Jupiter": "Leo",
+    "Saturn": "Pisces",
+    "Rahu": "Cancer",
+    "Ketu": "Capricorn"
+  }
+}

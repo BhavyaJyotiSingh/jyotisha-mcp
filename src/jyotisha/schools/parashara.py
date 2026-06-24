@@ -11,7 +11,7 @@ from datetime import datetime
 from jyotisha.models.schemas import Chart, SchoolResult
 from jyotisha.engines.yoga import YogaEngine
 from jyotisha.engines.dasha import DashaEngine
-from jyotisha.constants import HOUSE_SIGNIFICATIONS
+from jyotisha.constants import BHAVA_KARAKAS, HOUSE_SIGNIFICATIONS
 
 class ParasharaModule:
     """
@@ -192,14 +192,23 @@ class ParasharaModule:
                     strength += 2
                     
             strength = max(0, min(10, strength))
+            bhavat_bhavam_house = ((2 * house.number - 2) % 12) + 1
             
             results.append({
                 "house": house.number,
                 "sign": house.sign,
                 "lord": house.lord,
+                "lord_house": lord.house if lord else None,
+                "lord_sign": lord.sign if lord else None,
+                "lord_dignity": lord.dignity.status if lord else "Unknown",
                 "occupants": house.planets_in_house,
                 "aspects_received": house.aspects_received,
+                "karakas": [planet.value for planet in BHAVA_KARAKAS.get(house.number, [])],
                 "significations": HOUSE_SIGNIFICATIONS.get(house.number, []),
+                "bhavat_bhavam_house": bhavat_bhavam_house,
+                "bhavat_bhavam_significations": HOUSE_SIGNIFICATIONS.get(
+                    bhavat_bhavam_house, []
+                ),
                 "overall_strength": strength,
             })
         return results

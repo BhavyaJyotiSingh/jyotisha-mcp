@@ -1,0 +1,18 @@
+{
+  "name": "Charles Darwin",
+  "datetime_str": "1809-02-12T12:00:00",
+  "latitude": 52.7073,
+  "longitude": -2.7553,
+  "expected_ascendant": "Gemini",
+  "expected_planets": {
+    "Sun": "Aquarius",
+    "Moon": "Capricorn",
+    "Mercury": "Aquarius",
+    "Venus": "Pisces",
+    "Mars": "Libra",
+    "Jupiter": "Pisces",
+    "Saturn": "Scorpio",
+    "Rahu": "Libra",
+    "Ketu": "Aries"
+  }
+}

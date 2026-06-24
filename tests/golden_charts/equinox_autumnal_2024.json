@@ -1,0 +1,18 @@
+{
+  "name": "equinox_autumnal_2024",
+  "datetime_str": "2024-09-22T12:00:00",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Scorpio",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Taurus",
+    "Mercury": "Leo",
+    "Venus": "Libra",
+    "Mars": "Gemini",
+    "Jupiter": "Taurus",
+    "Saturn": "Aquarius",
+    "Rahu": "Pisces",
+    "Ketu": "Virgo"
+  }
+}

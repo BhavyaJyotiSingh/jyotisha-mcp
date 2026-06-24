@@ -5,7 +5,6 @@ Ingests classical astrological texts into ChromaDB.
 """
 
 from __future__ import annotations
-import os
 try:
     import chromadb
     HAS_CHROMA = True

@@ -1,0 +1,18 @@
+{
+  "name": "leap_day_2028",
+  "datetime_str": "2028-02-29T12:00:00",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Taurus",
+  "expected_planets": {
+    "Sun": "Aquarius",
+    "Moon": "Pisces",
+    "Mercury": "Capricorn",
+    "Venus": "Aries",
+    "Mars": "Aquarius",
+    "Jupiter": "Leo",
+    "Saturn": "Aries",
+    "Rahu": "Capricorn",
+    "Ketu": "Cancer"
+  }
+}

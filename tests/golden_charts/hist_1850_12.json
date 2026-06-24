@@ -1,0 +1,18 @@
+{
+  "name": "hist_1850_12",
+  "datetime_str": "1850-12-02T10:04:00",
+  "latitude": 11.415611980858912,
+  "longitude": -53.16545664850872,
+  "expected_ascendant": "Capricorn",
+  "expected_planets": {
+    "Sun": "Scorpio",
+    "Moon": "Scorpio",
+    "Mercury": "Scorpio",
+    "Venus": "Sagittarius",
+    "Mars": "Scorpio",
+    "Jupiter": "Virgo",
+    "Saturn": "Pisces",
+    "Rahu": "Cancer",
+    "Ketu": "Capricorn"
+  }
+}

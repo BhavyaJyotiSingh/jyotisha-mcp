@@ -8,8 +8,8 @@ Implements Jaimini Sutras analysis, including:
 """
 
 from typing import Optional
-from jyotisha.models.schemas import Chart, ArudhaPada, SchoolResult
-from jyotisha.constants import Planet, Modality, SIGN_MODALITIES, SIGN_NAMES
+from jyotisha.models.schemas import Chart, SchoolResult
+from jyotisha.constants import Planet, Modality, SIGN_MODALITIES
 from jyotisha.engines.arudha import ArudhaEngine
 
 
@@ -20,28 +20,63 @@ class JaiminiModule:
     school_name = "Jaimini"
     sources = ["Jaimini Sutras"]
 
-    def analyze_chart(self, chart: Chart) -> dict:
+    def __init__(self, use_8_karakas: bool = False):
+        self.use_8_karakas = use_8_karakas
+
+    def compute_karakamsa(self, chart: Chart, use_8_karakas: Optional[bool] = None) -> dict:
+        """
+        Calculate the Karakamsa (Navamsha sign of Atmakaraka)
+        and Swamsa (Karakamsa treated as Ascendant sign).
+        """
+        karakas = self._compute_chara_karakas(chart, use_8_karakas=use_8_karakas)
+        ak_info = karakas.get("Atmakaraka (AK) - Self/Soul")
+        if not ak_info:
+            return {}
+        
+        ak_planet = ak_info["planet"]
+        planet_obj = chart.get_planet(ak_planet)
+        if not planet_obj:
+            return {}
+        
+        from jyotisha.engines.varga import VargaEngine
+        varga_engine = VargaEngine()
+        karakamsa_sign_num = varga_engine.compute_varga_sign(planet_obj.longitude, 9)
+        
+        from jyotisha.constants import SIGN_NAMES
+        karakamsa_sign_name = SIGN_NAMES[karakamsa_sign_num]
+        
+        return {
+            "atmakaraka_planet": ak_planet,
+            "karakamsa_sign_number": karakamsa_sign_num,
+            "karakamsa_sign": karakamsa_sign_name,
+            "swamsa_sign_number": karakamsa_sign_num,
+            "swamsa_sign": karakamsa_sign_name
+        }
+
+    def analyze_chart(self, chart: Chart, use_8_karakas: Optional[bool] = None) -> dict:
         """
         Run full Jaimini analysis on a birth chart.
         """
-        karakas = self._compute_chara_karakas(chart)
+        karakas = self._compute_chara_karakas(chart, use_8_karakas=use_8_karakas)
         rashi_drishti = self._compute_rashi_drishti(chart)
         arudha_engine = ArudhaEngine()
         arudhas = arudha_engine.compute_arudhas(chart)
+        karakamsa = self.compute_karakamsa(chart, use_8_karakas=use_8_karakas)
         
         return {
             "school": self.school_name,
             "chara_karakas": karakas,
             "rashi_drishti": rashi_drishti,
             "arudha_padas": [a.model_dump() for a in arudhas],
+            "karakamsa": karakamsa,
             "sources_used": self.sources
         }
 
-    def predict(self, chart: Chart, question: str, target_date: Optional[str] = None) -> SchoolResult:
+    def predict(self, chart: Chart, question: str, target_date: Optional[str] = None, use_8_karakas: Optional[bool] = None) -> SchoolResult:
         """
         Generate a prediction based on Jaimini principles.
         """
-        karakas = self._compute_chara_karakas(chart)
+        karakas = self._compute_chara_karakas(chart, use_8_karakas=use_8_karakas)
         
         if question.lower() == "marriage":
             dk = karakas.get("Darakaraka (DK) - Spouse/Partnership")
@@ -163,37 +198,75 @@ class JaiminiModule:
         """Explain the school's result."""
         return f"[Jaimini Explanation]: {result.reasoning}"
 
-    def _compute_chara_karakas(self, chart: Chart) -> dict:
+    def _compute_chara_karakas(self, chart: Chart, use_8_karakas: Optional[bool] = None) -> dict:
         """
-        Calculate the 7 Chara Karakas based on degrees in sign.
-        Excludes Rahu and Ketu (using the 7-karaka scheme).
+        Calculate the Chara Karakas based on degrees in sign.
+        Supports 7-karaka (default, excluding Rahu) and 8-karaka (including Rahu) schemes.
+        For Rahu, the degree in the sign is calculated as 30.0 - degree_in_sign.
         """
-        # Get 7 main planets (Sun to Saturn)
-        main_planets = [p for p in chart.planets if p.name not in [Planet.RAHU, Planet.KETU]]
-        
-        # Sort by degree_in_sign descending
-        sorted_planets = sorted(main_planets, key=lambda p: p.degree_in_sign, reverse=True)
-        
-        karaka_names = [
-            "Atmakaraka (AK) - Self/Soul",
-            "Amatyakaraka (AmK) - Career/Mind",
-            "Bhratrukaraka (BK) - Siblings/Guru",
-            "Matrukaraka (MK) - Mother/Property",
-            "Putrakaraka (PK) - Children/Intellect",
-            "Gnatikaraka (GK) - Rivals/Disease",
-            "Darakaraka (DK) - Spouse/Partnership"
-        ]
-        
-        karakas = {}
-        for i, planet in enumerate(sorted_planets):
-            if i < len(karaka_names):
-                karakas[karaka_names[i]] = {
-                    "planet": planet.name,
-                    "degree": planet.degree_in_sign,
-                    "sign": planet.sign
-                }
+        if use_8_karakas is None:
+            use_8_karakas = self.use_8_karakas
+
+        if use_8_karakas:
+            # 8-karaka scheme: Include Rahu, exclude Ketu
+            planets_to_use = [p for p in chart.planets if p.name != Planet.KETU]
+            
+            planet_degrees = []
+            for p in planets_to_use:
+                if p.name == Planet.RAHU:
+                    eff_deg = 30.0 - p.degree_in_sign
+                else:
+                    eff_deg = p.degree_in_sign
+                planet_degrees.append((p.name, eff_deg, p.sign))
                 
-        return karakas
+            sorted_planets = sorted(planet_degrees, key=lambda x: (x[1], x[0]), reverse=True)
+            
+            karaka_names = [
+                "Atmakaraka (AK) - Self/Soul",
+                "Amatyakaraka (AmK) - Career/Mind",
+                "Bhratrukaraka (BK) - Siblings/Guru",
+                "Matrukaraka (MK) - Mother/Property",
+                "Pitrukaraka (PiK) - Father/Ancestors",
+                "Putrakaraka (PK) - Children/Intellect",
+                "Gnatikaraka (GK) - Rivals/Disease",
+                "Darakaraka (DK) - Spouse/Partnership"
+            ]
+            
+            karakas = {}
+            for i, (planet_name, degree, sign) in enumerate(sorted_planets):
+                if i < len(karaka_names):
+                    karakas[karaka_names[i]] = {
+                        "planet": planet_name,
+                        "degree": degree,
+                        "sign": sign
+                    }
+            return karakas
+        else:
+            # 7-karaka scheme: Exclude Rahu and Ketu
+            main_planets = [p for p in chart.planets if p.name not in [Planet.RAHU, Planet.KETU]]
+            
+            sorted_planets = sorted(main_planets, key=lambda p: (p.degree_in_sign, p.name), reverse=True)
+            
+            karaka_names = [
+                "Atmakaraka (AK) - Self/Soul",
+                "Amatyakaraka (AmK) - Career/Mind",
+                "Bhratrukaraka (BK) - Siblings/Guru",
+                "Matrukaraka (MK) - Mother/Property",
+                "Putrakaraka (PK) - Children/Intellect",
+                "Gnatikaraka (GK) - Rivals/Disease",
+                "Darakaraka (DK) - Spouse/Partnership"
+            ]
+            
+            karakas = {}
+            for i, planet in enumerate(sorted_planets):
+                if i < len(karaka_names):
+                    karakas[karaka_names[i]] = {
+                        "planet": planet.name,
+                        "degree": planet.degree_in_sign,
+                        "sign": planet.sign
+                    }
+                    
+            return karakas
 
     def _compute_rashi_drishti(self, chart: Chart) -> dict:
         """

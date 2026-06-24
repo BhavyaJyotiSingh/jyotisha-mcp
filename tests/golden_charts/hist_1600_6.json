@@ -1,0 +1,18 @@
+{
+  "name": "hist_1600_6",
+  "datetime_str": "1600-06-03T12:24:00",
+  "latitude": 19.58884283611281,
+  "longitude": -7.66802693167746,
+  "expected_ascendant": "Virgo",
+  "expected_planets": {
+    "Sun": "Taurus",
+    "Moon": "Aquarius",
+    "Mercury": "Gemini",
+    "Venus": "Aries",
+    "Mars": "Leo",
+    "Jupiter": "Cancer",
+    "Saturn": "Libra",
+    "Rahu": "Capricorn",
+    "Ketu": "Cancer"
+  }
+}

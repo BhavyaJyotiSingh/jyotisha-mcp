@@ -1,0 +1,18 @@
+{
+  "name": "hist_1700_9",
+  "datetime_str": "1700-09-25T05:32:00",
+  "latitude": 51.262783934482044,
+  "longitude": 88.92445676082406,
+  "expected_ascendant": "Virgo",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Aquarius",
+    "Mercury": "Leo",
+    "Venus": "Leo",
+    "Mars": "Sagittarius",
+    "Jupiter": "Capricorn",
+    "Saturn": "Aquarius",
+    "Rahu": "Leo",
+    "Ketu": "Aquarius"
+  }
+}

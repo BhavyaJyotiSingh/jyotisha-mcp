@@ -1,0 +1,18 @@
+{
+  "name": "leap_day_end_2024",
+  "datetime_str": "2024-02-29T23:59:59",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Scorpio",
+  "expected_planets": {
+    "Sun": "Aquarius",
+    "Moon": "Libra",
+    "Mercury": "Aquarius",
+    "Venus": "Capricorn",
+    "Mars": "Capricorn",
+    "Jupiter": "Aries",
+    "Saturn": "Aquarius",
+    "Rahu": "Pisces",
+    "Ketu": "Virgo"
+  }
+}

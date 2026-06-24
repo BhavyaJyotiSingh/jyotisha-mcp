@@ -1,0 +1,18 @@
+{
+  "name": "hist_1750_12",
+  "datetime_str": "1750-12-03T02:46:00",
+  "latitude": 8.599046331661377,
+  "longitude": -103.38899556758793,
+  "expected_ascendant": "Libra",
+  "expected_planets": {
+    "Sun": "Scorpio",
+    "Moon": "Capricorn",
+    "Mercury": "Scorpio",
+    "Venus": "Scorpio",
+    "Mars": "Libra",
+    "Jupiter": "Aries",
+    "Saturn": "Scorpio",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

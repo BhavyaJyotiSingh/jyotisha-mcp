@@ -1,0 +1,18 @@
+{
+  "name": "solstice_winter_2012",
+  "datetime_str": "2012-12-21T12:00:00",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Aquarius",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Pisces",
+    "Mercury": "Scorpio",
+    "Venus": "Scorpio",
+    "Mars": "Capricorn",
+    "Jupiter": "Taurus",
+    "Saturn": "Libra",
+    "Rahu": "Scorpio",
+    "Ketu": "Taurus"
+  }
+}

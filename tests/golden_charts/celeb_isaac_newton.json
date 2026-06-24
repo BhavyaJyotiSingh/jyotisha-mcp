@@ -1,0 +1,18 @@
+{
+  "name": "Isaac Newton",
+  "datetime_str": "1643-01-04T00:00:00",
+  "latitude": 52.8086,
+  "longitude": -0.6272,
+  "expected_ascendant": "Virgo",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Gemini",
+    "Mercury": "Sagittarius",
+    "Venus": "Aquarius",
+    "Mars": "Aries",
+    "Jupiter": "Aquarius",
+    "Saturn": "Pisces",
+    "Rahu": "Virgo",
+    "Ketu": "Pisces"
+  }
+}

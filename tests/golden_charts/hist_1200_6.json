@@ -1,0 +1,18 @@
+{
+  "name": "hist_1200_6",
+  "datetime_str": "1200-06-12T05:23:00",
+  "latitude": -4.472929977247851,
+  "longitude": 40.84204185064641,
+  "expected_ascendant": "Gemini",
+  "expected_planets": {
+    "Sun": "Gemini",
+    "Moon": "Gemini",
+    "Mercury": "Taurus",
+    "Venus": "Aries",
+    "Mars": "Pisces",
+    "Jupiter": "Scorpio",
+    "Saturn": "Pisces",
+    "Rahu": "Cancer",
+    "Ketu": "Capricorn"
+  }
+}

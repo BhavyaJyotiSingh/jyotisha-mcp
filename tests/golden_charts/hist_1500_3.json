@@ -1,0 +1,18 @@
+{
+  "name": "hist_1500_3",
+  "datetime_str": "1500-03-21T14:09:00",
+  "latitude": -13.511983350194754,
+  "longitude": -60.80939815344397,
+  "expected_ascendant": "Cancer",
+  "expected_planets": {
+    "Sun": "Pisces",
+    "Moon": "Sagittarius",
+    "Mercury": "Aquarius",
+    "Venus": "Aries",
+    "Mars": "Taurus",
+    "Jupiter": "Aquarius",
+    "Saturn": "Taurus",
+    "Rahu": "Taurus",
+    "Ketu": "Scorpio"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "leap_day_end_2012",
+  "datetime_str": "2012-02-29T23:59:59",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Scorpio",
+  "expected_planets": {
+    "Sun": "Aquarius",
+    "Moon": "Taurus",
+    "Mercury": "Pisces",
+    "Venus": "Aries",
+    "Mars": "Leo",
+    "Jupiter": "Aries",
+    "Saturn": "Libra",
+    "Rahu": "Scorpio",
+    "Ketu": "Taurus"
+  }
+}

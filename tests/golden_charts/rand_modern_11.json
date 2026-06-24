@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_11",
+  "datetime_str": "1915-10-08T18:38:00",
+  "latitude": -55.231000525312275,
+  "longitude": -150.4859740218448,
+  "expected_ascendant": "Pisces",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Virgo",
+    "Mercury": "Libra",
+    "Venus": "Virgo",
+    "Mars": "Cancer",
+    "Jupiter": "Aquarius",
+    "Saturn": "Gemini",
+    "Rahu": "Capricorn",
+    "Ketu": "Cancer"
+  }
+}

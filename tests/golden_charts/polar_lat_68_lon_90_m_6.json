@@ -1,0 +1,18 @@
+{
+  "name": "polar_lat_68_lon_90_m_6",
+  "datetime_str": "2024-06-21T12:00:00",
+  "latitude": 68.0,
+  "longitude": 90.0,
+  "expected_ascendant": "Leo",
+  "expected_planets": {
+    "Sun": "Gemini",
+    "Moon": "Scorpio",
+    "Mercury": "Gemini",
+    "Venus": "Gemini",
+    "Mars": "Aries",
+    "Jupiter": "Taurus",
+    "Saturn": "Aquarius",
+    "Rahu": "Pisces",
+    "Ketu": "Virgo"
+  }
+}

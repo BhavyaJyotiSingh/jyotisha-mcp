@@ -1,0 +1,18 @@
+{
+  "name": "hist_500_9",
+  "datetime_str": "0500-09-03T18:27:00",
+  "latitude": -36.82173205182164,
+  "longitude": -97.51314243321781,
+  "expected_ascendant": "Pisces",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Cancer",
+    "Mercury": "Virgo",
+    "Venus": "Leo",
+    "Mars": "Scorpio",
+    "Jupiter": "Scorpio",
+    "Saturn": "Gemini",
+    "Rahu": "Aquarius",
+    "Ketu": "Leo"
+  }
+}

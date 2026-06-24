@@ -5,7 +5,86 @@ Mathematical computation of all Divisional Charts (Vargas).
 Includes D1 through D144 based on classical principles.
 """
 
+from dataclasses import dataclass, field
+from enum import StrEnum
+
 from jyotisha.constants import Sign
+
+
+class HoraMethod(StrEnum):
+    """Supported D2 Hora computation traditions."""
+
+    PARASHARA = "Parashara"
+    KASHINATHA = "Kashinatha"
+
+
+class DrekkanaMethod(StrEnum):
+    """Supported D3 Drekkana computation traditions."""
+
+    PARASHARA = "Parashara"
+    SOMNATHA = "Somnatha"
+    JAGANNATHA = "Jagannatha"
+
+
+@dataclass(frozen=True)
+class VargaFormulaSpec:
+    """Traceable metadata for a divisional-chart formula."""
+
+    division: int
+    classical_source: str
+    method: str
+    alternative_methods: tuple[str, ...] = ()
+    unit_test_cases: tuple[tuple[float, int], ...] = field(default_factory=tuple)
+
+
+VARGA_FORMULA_SPECS: dict[int, VargaFormulaSpec] = {
+    2: VargaFormulaSpec(
+        division=2,
+        classical_source="BPHS Ch.6, Sl.5-6",
+        method=HoraMethod.PARASHARA.value,
+        alternative_methods=(HoraMethod.KASHINATHA.value,),
+        unit_test_cases=((7.5, Sign.LEO.value), (22.5, Sign.CANCER.value)),
+    ),
+    3: VargaFormulaSpec(
+        division=3,
+        classical_source="BPHS Ch.6, Sl.7",
+        method=DrekkanaMethod.PARASHARA.value,
+        alternative_methods=(
+            DrekkanaMethod.SOMNATHA.value,
+            DrekkanaMethod.JAGANNATHA.value,
+        ),
+        unit_test_cases=((5.0, Sign.ARIES.value), (15.0, Sign.LEO.value)),
+    ),
+    9: VargaFormulaSpec(
+        division=9,
+        classical_source="BPHS Ch.6, Sl.9-10",
+        method="Parashara",
+        unit_test_cases=((15.0, Sign.LEO.value), (33.0, Sign.CAPRICORN.value)),
+    ),
+    60: VargaFormulaSpec(
+        division=60,
+        classical_source="BPHS Ch.6, Sl.28-31",
+        method="Odd signs forward, even signs offset per implemented BPHS mapping",
+        unit_test_cases=((0.25, Sign.ARIES.value), (30.25, Sign.SAGITTARIUS.value)),
+    ),
+    81: VargaFormulaSpec(
+        division=81,
+        classical_source="BPHS variant tradition",
+        method="D9(D9)",
+        unit_test_cases=((0.25, Sign.ARIES.value),),
+    ),
+    108: VargaFormulaSpec(
+        division=108,
+        classical_source="Classical compositional varga tradition",
+        method="D12(D9)",
+    ),
+    144: VargaFormulaSpec(
+        division=144,
+        classical_source="Classical compositional varga tradition",
+        method="D12(D12)",
+    ),
+}
+
 
 class VargaEngine:
     """Dedicated mathematical engine for calculating Varga boundaries and mapping."""
@@ -14,8 +93,17 @@ class VargaEngine:
     def get_supported_vargas() -> list[int]:
         return [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 20, 24, 27, 30, 40, 45, 60, 81, 108, 144]
 
+    @staticmethod
+    def get_formula_spec(division: int) -> VargaFormulaSpec:
+        """Return traceable formula metadata for a supported varga."""
+        try:
+            return VARGA_FORMULA_SPECS[division]
+        except KeyError as exc:
+            raise ValueError(f"No formula metadata registered for D{division}.") from exc
+
     def compute_varga_sign(self, longitude: float, division: int) -> int:
         """Compute the mapped sign (0-11) for a given longitude in a specific varga division."""
+        longitude = self._normalize_longitude(longitude)
         methods = {
             2: self._compute_hora_sign,
             3: self._compute_drekkana_sign,
@@ -48,6 +136,7 @@ class VargaEngine:
 
     def compute_varga_degree(self, longitude: float, division: int) -> float:
         """Calculate the exact fractional degree of a planet mathematically mapped into the Varga sign."""
+        longitude = self._normalize_longitude(longitude)
         if division == 30:
             deg = longitude % 30.0
             sign = int(longitude // 30.0)
@@ -67,6 +156,12 @@ class VargaEngine:
             fraction = (longitude % slice_size) / slice_size
             
         return fraction * 30.0
+
+    @staticmethod
+    def _normalize_longitude(longitude: float) -> float:
+        if not isinstance(longitude, (int, float)):
+            raise TypeError("Longitude must be numeric")
+        return float(longitude) % 360.0
 
     # ─────────────────────────────────────────────────────────
     # Individual Varga Methods
@@ -240,15 +335,13 @@ class VargaEngine:
         return self._compute_navamsa_sign(d9_lon)
 
     def _compute_ashtottaramsa_sign(self, longitude: float) -> int:
-        """D108 Ashtottaramsa: 108 parts of 0°16'40\" each."""
-        deg = longitude % 30
-        part = int(deg / (30.0 / 108.0))
-        # Usually starts from Aries (0) and goes continuously
-        return part % 12
+        """D108 Ashtottaramsa: D12 applied to the D9 position."""
+        d9_sign = self._compute_navamsa_sign(longitude)
+        d9_degree = self.compute_varga_degree(longitude, 9)
+        return self._compute_dwadasamsa_sign(d9_sign * 30.0 + d9_degree)
 
     def _compute_dwadashadwadasamsa_sign(self, longitude: float) -> int:
-        """D144 Dwadashadwadasamsa: 144 parts of 0°12'30\" each (D12 of D12)."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 144.0))
-        return (sign + part) % 12
+        """D144 Dwadashadwadasamsa: D12 applied twice."""
+        d12_sign = self._compute_dwadasamsa_sign(longitude)
+        d12_degree = self.compute_varga_degree(longitude, 12)
+        return self._compute_dwadasamsa_sign(d12_sign * 30.0 + d12_degree)

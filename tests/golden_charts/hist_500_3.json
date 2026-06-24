@@ -1,0 +1,18 @@
+{
+  "name": "hist_500_3",
+  "datetime_str": "0500-03-21T03:01:00",
+  "latitude": 34.15504997598329,
+  "longitude": -61.22595508716571,
+  "expected_ascendant": "Capricorn",
+  "expected_planets": {
+    "Sun": "Pisces",
+    "Moon": "Gemini",
+    "Mercury": "Pisces",
+    "Venus": "Aquarius",
+    "Mars": "Libra",
+    "Jupiter": "Scorpio",
+    "Saturn": "Taurus",
+    "Rahu": "Pisces",
+    "Ketu": "Virgo"
+  }
+}

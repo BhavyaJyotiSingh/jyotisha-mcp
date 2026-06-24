@@ -1,0 +1,18 @@
+{
+  "name": "rand_modern_0",
+  "datetime_str": "1983-11-04T01:25:00",
+  "latitude": 27.385630612941924,
+  "longitude": 108.21330391021155,
+  "expected_ascendant": "Leo",
+  "expected_planets": {
+    "Sun": "Libra",
+    "Moon": "Libra",
+    "Mercury": "Libra",
+    "Venus": "Virgo",
+    "Mars": "Leo",
+    "Jupiter": "Scorpio",
+    "Saturn": "Libra",
+    "Rahu": "Taurus",
+    "Ketu": "Scorpio"
+  }
+}

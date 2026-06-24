@@ -1,0 +1,18 @@
+{
+  "name": "hist_1200_12",
+  "datetime_str": "1200-12-18T23:15:00",
+  "latitude": -23.65975062380716,
+  "longitude": -28.930693978164527,
+  "expected_ascendant": "Virgo",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Taurus",
+    "Mercury": "Sagittarius",
+    "Venus": "Sagittarius",
+    "Mars": "Aries",
+    "Jupiter": "Sagittarius",
+    "Saturn": "Pisces",
+    "Rahu": "Gemini",
+    "Ketu": "Sagittarius"
+  }
+}

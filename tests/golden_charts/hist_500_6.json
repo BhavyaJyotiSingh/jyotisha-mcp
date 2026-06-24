@@ -1,0 +1,18 @@
+{
+  "name": "hist_500_6",
+  "datetime_str": "0500-06-05T23:06:00",
+  "latitude": 27.669948742291126,
+  "longitude": 94.1230962491629,
+  "expected_ascendant": "Aquarius",
+  "expected_planets": {
+    "Sun": "Gemini",
+    "Moon": "Pisces",
+    "Mercury": "Cancer",
+    "Venus": "Taurus",
+    "Mars": "Libra",
+    "Jupiter": "Libra",
+    "Saturn": "Gemini",
+    "Rahu": "Aquarius",
+    "Ketu": "Leo"
+  }
+}

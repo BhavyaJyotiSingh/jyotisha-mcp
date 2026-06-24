@@ -1,0 +1,18 @@
+{
+  "name": "hist_1500_12",
+  "datetime_str": "1500-12-17T15:05:00",
+  "latitude": 35.57821575337378,
+  "longitude": 86.66469831999979,
+  "expected_ascendant": "Taurus",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Libra",
+    "Mercury": "Sagittarius",
+    "Venus": "Scorpio",
+    "Mars": "Scorpio",
+    "Jupiter": "Pisces",
+    "Saturn": "Taurus",
+    "Rahu": "Taurus",
+    "Ketu": "Scorpio"
+  }
+}

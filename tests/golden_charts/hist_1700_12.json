@@ -1,0 +1,18 @@
+{
+  "name": "hist_1700_12",
+  "datetime_str": "1700-12-10T20:32:00",
+  "latitude": 20.897021143817234,
+  "longitude": -83.31857554808764,
+  "expected_ascendant": "Cancer",
+  "expected_planets": {
+    "Sun": "Scorpio",
+    "Moon": "Sagittarius",
+    "Mercury": "Sagittarius",
+    "Venus": "Libra",
+    "Mars": "Capricorn",
+    "Jupiter": "Capricorn",
+    "Saturn": "Aquarius",
+    "Rahu": "Leo",
+    "Ketu": "Aquarius"
+  }
+}

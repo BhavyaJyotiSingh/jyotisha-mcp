@@ -1,0 +1,18 @@
+{
+  "name": "hist_1000_12",
+  "datetime_str": "1000-12-22T07:49:00",
+  "latitude": -11.061203639789284,
+  "longitude": -100.8499255383294,
+  "expected_ascendant": "Capricorn",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Libra",
+    "Mercury": "Sagittarius",
+    "Venus": "Sagittarius",
+    "Mars": "Capricorn",
+    "Jupiter": "Capricorn",
+    "Saturn": "Taurus",
+    "Rahu": "Pisces",
+    "Ketu": "Virgo"
+  }
+}

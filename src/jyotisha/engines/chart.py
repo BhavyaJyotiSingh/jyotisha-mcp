@@ -9,19 +9,49 @@ and Pushkara Navamsha.
 
 from __future__ import annotations
 from datetime import datetime, timezone
+import hashlib
+import json
 from typing import Optional
 
 from jyotisha.constants import (
-    SIGN_NAMES, SIGN_LORDS, Sign, Ayanamsha,
+    Ayanamsha,
+    NAKSHATRA_LORDS,
+    NAKSHATRA_NAMES,
+    NAKSHATRA_SPAN,
+    SIGN_LORDS,
+    SIGN_NAMES,
+    Sign,
 )
 from jyotisha.models.schemas import (
     Chart, ChartMetadata, PlanetPosition, Ascendant, House, BirthEvent,
 )
 from jyotisha.engines.astronomy import (
-    AstronomicalEngine, compute_dignity, compute_aspects,
+    AstronomicalEngine,
+    compute_aspects,
+    compute_dignity,
+    compute_graha_yuddhas as _compute_graha_yuddhas,
 )
 from jyotisha.engines.houses import get_house_strategy
 from jyotisha.engines.calendar import CalendarEngine
+from jyotisha.engines.varga import VargaEngine
+
+
+def compute_graha_yuddhas(planets_data: dict[str, dict]) -> dict[str, str]:
+    """Compatibility export for the canonical astronomy implementation."""
+    return _compute_graha_yuddhas(planets_data)
+
+
+def _nakshatra_fields(longitude: float) -> tuple[str, int, int, str]:
+    longitude %= 360.0
+    number = min(int(longitude / NAKSHATRA_SPAN), 26)
+    offset = longitude - number * NAKSHATRA_SPAN
+    pada = min(int(offset / (NAKSHATRA_SPAN / 4.0)) + 1, 4)
+    return (
+        NAKSHATRA_NAMES[number],
+        number,
+        pada,
+        NAKSHATRA_LORDS[number].value,
+    )
 
 
 def is_pushkara_navamsa(sign_number: int, degree_in_sign: float) -> bool:
@@ -29,50 +59,24 @@ def is_pushkara_navamsa(sign_number: int, degree_in_sign: float) -> bool:
     Check if a planet is in Pushkara Navamsha based on its sign and degree.
     """
     element_type = sign_number % 4
-    if element_type == 0:  # Fire (Aries, Leo, Sagittarius)
-        return (20.0 <= degree_in_sign <= 23.33333) or (26.66667 <= degree_in_sign <= 30.0)
-    elif element_type == 1:  # Earth (Taurus, Virgo, Capricorn)
-        return (6.66667 <= degree_in_sign <= 10.0) or (13.33333 <= degree_in_sign <= 16.66667)
-    elif element_type == 2:  # Air (Gemini, Libra, Aquarius)
-        return (16.66667 <= degree_in_sign <= 20.0) or (23.33333 <= degree_in_sign <= 26.66667)
-    elif element_type == 3:  # Water (Cancer, Scorpio, Pisces)
-        return (0.0 <= degree_in_sign <= 3.33333) or (6.66667 <= degree_in_sign <= 10.0)
+    one_ninth = 30.0 / 9.0
+    if element_type == 0:  # Fire
+        return (6 * one_ninth <= degree_in_sign < 7 * one_ninth) or (
+            8 * one_ninth <= degree_in_sign < 30.0
+        )
+    if element_type == 1:  # Earth
+        return (2 * one_ninth <= degree_in_sign < 3 * one_ninth) or (
+            4 * one_ninth <= degree_in_sign < 5 * one_ninth
+        )
+    if element_type == 2:  # Air
+        return (5 * one_ninth <= degree_in_sign < 6 * one_ninth) or (
+            7 * one_ninth <= degree_in_sign < 8 * one_ninth
+        )
+    if element_type == 3:  # Water
+        return (0.0 <= degree_in_sign < one_ninth) or (
+            2 * one_ninth <= degree_in_sign < 3 * one_ninth
+        )
     return False
-
-
-def compute_graha_yuddhas(planets_data: dict[str, dict]) -> dict[str, str]:
-    """
-    Computes Graha Yuddha (planetary war).
-    Returns a dict mapping planet name to its war status.
-    """
-    from jyotisha.constants import Planet
-    # Classical Graha Yuddha involves only the 5 Tara Grahas (BPHS Ch. 28).
-    # Sun, Moon, Rahu, and Ketu NEVER participate in planetary war.
-    warring = [Planet.MARS.value, Planet.MERCURY.value, Planet.JUPITER.value, Planet.VENUS.value, Planet.SATURN.value]
-    results = {}
-    
-    # Compare all pairs
-    for i in range(len(warring)):
-        for j in range(i + 1, len(warring)):
-            p1 = warring[i]
-            p2 = warring[j]
-            if p1 in planets_data and p2 in planets_data:
-                lon1 = planets_data[p1]["longitude"]
-                lon2 = planets_data[p2]["longitude"]
-                diff = abs(lon1 - lon2) % 360.0
-                diff = min(diff, 360.0 - diff)
-                
-                if diff <= 1.0:
-                    # Winner is the one with higher (more northern) latitude (classical rule)
-                    lat1 = planets_data[p1].get("latitude", 0.0)
-                    lat2 = planets_data[p2].get("latitude", 0.0)
-                    if lat1 > lat2:
-                        results[p1] = f"Won against {p2}"
-                        results[p2] = f"Lost to {p1}"
-                    else:
-                        results[p2] = f"Won against {p1}"
-                        results[p1] = f"Lost to {p2}"
-    return results
 
 
 class ChartEngine:
@@ -96,6 +100,7 @@ class ChartEngine:
         self.house_system = house_system
         self.ayanamsha = ayanamsha
         self.topocentric = topocentric
+        self.varga = VargaEngine()
 
     def generate_birth_chart(
         self,
@@ -157,9 +162,6 @@ class ChartEngine:
         strategy = get_house_strategy(self.house_system)
         houses = strategy.build_houses(asc_sign_num, asc_data.get("cusps", []))
 
-        # Compute planetary war (Graha Yuddha)
-        war_results = compute_graha_yuddhas(raw_positions)
-
         # Build planet models
         planets = []
         for name, data in raw_positions.items():
@@ -170,9 +172,7 @@ class ChartEngine:
             dignity = compute_dignity(name, data["sign_number"], data["degree_in_sign"])
 
             # Check vargottama
-            from jyotisha.engines.varga import VargaEngine
-            varga_engine = VargaEngine()
-            navamsa_sign = varga_engine.compute_varga_sign(data["longitude"], 9)
+            navamsa_sign = self.varga.compute_varga_sign(data["longitude"], 9)
             is_vargottama = (data["sign_number"] == navamsa_sign)
 
             # Check Pushkara Navamsha
@@ -190,7 +190,9 @@ class ChartEngine:
                 degree_in_sign=data["degree_in_sign"],
                 retrograde=data["retrograde"],
                 combust=data.get("combust", False),
-                planetary_war=war_results.get(name),
+                in_war=data.get("in_war", False),
+                war_winner=data.get("war_winner", False),
+                planetary_war=data.get("planetary_war"),
                 nakshatra=data["nakshatra"],
                 nakshatra_number=data["nakshatra_number"],
                 pada=data["pada"],
@@ -220,6 +222,22 @@ class ChartEngine:
             Ayanamsha.TRUE_CITRA: "True Chitrapaksha",
         }
 
+        computation_input = {
+            "julian_day": jd,
+            "latitude": lat,
+            "longitude": lon,
+            "altitude": event.location.altitude,
+            "ayanamsha_id": int(self.ayanamsha),
+            "house_system": self.house_system,
+            "true_nodes": self.astro.true_nodes,
+            "topocentric": self.topocentric,
+            "ephemeris_version": self.astro.ephemeris_version,
+        }
+        computation_hash = hashlib.sha256(
+            json.dumps(
+                computation_input, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
+        ).hexdigest()
         metadata = ChartMetadata(
             chart_type="D1",
             ayanamsha=ayan_names.get(self.ayanamsha, f"ID_{self.ayanamsha}"),
@@ -227,6 +245,9 @@ class ChartEngine:
             house_system="Whole Sign" if self.house_system == "W" else self.house_system,
             true_nodes=self.astro.true_nodes,
             topocentric=self.topocentric,
+            ephemeris_version=self.astro.ephemeris_version,
+            delta_t_seconds=self.astro.get_delta_t(jd),
+            computation_hash=computation_hash,
             computed_at=datetime.now(timezone.utc),
         )
 
@@ -250,8 +271,7 @@ class ChartEngine:
         """
         Generate a divisional chart from a base D1 chart.
         """
-        from jyotisha.engines.varga import VargaEngine
-        varga_engine = VargaEngine()
+        varga_engine = self.varga
 
         if division not in varga_engine.get_supported_vargas():
             raise ValueError(
@@ -274,6 +294,9 @@ class ChartEngine:
             varga_degree = varga_engine.compute_varga_degree(planet.longitude, division)
             varga_longitude = (new_sign * 30.0) + varga_degree
             dignity = compute_dignity(planet.name, new_sign, varga_degree)
+            nakshatra, nakshatra_number, pada, nakshatra_lord = (
+                _nakshatra_fields(varga_longitude)
+            )
 
             varga_planet = PlanetPosition(
                 name=planet.name,
@@ -289,10 +312,10 @@ class ChartEngine:
                 combust=planet.combust,
                 in_war=planet.in_war,
                 war_winner=planet.war_winner,
-                nakshatra=planet.nakshatra,
-                nakshatra_number=planet.nakshatra_number,
-                pada=planet.pada,
-                nakshatra_lord=planet.nakshatra_lord,
+                nakshatra=nakshatra,
+                nakshatra_number=nakshatra_number,
+                pada=pada,
+                nakshatra_lord=nakshatra_lord,
                 dignity=dignity,
                 vargottama=planet.vargottama,
                 pushkara_navamsa=planet.pushkara_navamsa,
@@ -315,15 +338,18 @@ class ChartEngine:
             computed_at=datetime.now(timezone.utc),
         )
 
+        asc_nakshatra, asc_nakshatra_number, asc_pada, _ = _nakshatra_fields(
+            varga_asc_longitude
+        )
         return Chart(
             ascendant=Ascendant(
                 longitude=varga_asc_longitude,
                 sign=SIGN_NAMES[asc_varga_sign],
                 sign_number=asc_varga_sign,
                 degree_in_sign=varga_asc_degree,
-                nakshatra=base_chart.ascendant.nakshatra,
-                nakshatra_number=base_chart.ascendant.nakshatra_number,
-                pada=base_chart.ascendant.pada,
+                nakshatra=asc_nakshatra,
+                nakshatra_number=asc_nakshatra_number,
+                pada=asc_pada,
                 lord=SIGN_LORDS[Sign(asc_varga_sign)].value,
             ),
             planets=varga_planets,

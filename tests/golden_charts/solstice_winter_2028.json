@@ -1,0 +1,18 @@
+{
+  "name": "solstice_winter_2028",
+  "datetime_str": "2028-12-21T12:00:00",
+  "latitude": 28.6139,
+  "longitude": 77.209,
+  "expected_ascendant": "Aquarius",
+  "expected_planets": {
+    "Sun": "Sagittarius",
+    "Moon": "Aquarius",
+    "Mercury": "Sagittarius",
+    "Venus": "Scorpio",
+    "Mars": "Virgo",
+    "Jupiter": "Virgo",
+    "Saturn": "Aries",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

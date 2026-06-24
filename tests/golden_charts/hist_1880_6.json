@@ -1,0 +1,18 @@
+{
+  "name": "hist_1880_6",
+  "datetime_str": "1880-06-19T18:30:00",
+  "latitude": -15.700275760427548,
+  "longitude": -6.486493693297518,
+  "expected_ascendant": "Sagittarius",
+  "expected_planets": {
+    "Sun": "Gemini",
+    "Moon": "Libra",
+    "Mercury": "Gemini",
+    "Venus": "Taurus",
+    "Mars": "Cancer",
+    "Jupiter": "Pisces",
+    "Saturn": "Aries",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

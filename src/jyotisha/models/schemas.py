@@ -123,6 +123,9 @@ class ChartMetadata(BaseModel):
     true_nodes: bool = True
     topocentric: bool = False
     engine_version: str = "0.1.0"
+    ephemeris_version: str = ""
+    delta_t_seconds: float = 0.0
+    computation_hash: str = ""
     computed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Chart(BaseModel):
@@ -231,6 +234,10 @@ class PanchangaElement(BaseModel):
     """A single panchanga element."""
     number: int
     name: str
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    quality: Optional[str] = None
+    applicable_activities: list[str] = Field(default_factory=list)
 
 class Panchanga(BaseModel):
     """Daily Panchanga data."""
@@ -315,6 +322,9 @@ class TransitResult(BaseModel):
     transit_planets: list[PlanetPosition]
     hits: list[TransitHit] = Field(default_factory=list)
     gochara_from_moon: dict[str, int] = Field(default_factory=dict)  # Planet -> House from Natal Moon
+    gochara_assessment: dict = Field(default_factory=dict)
+    double_transit_activations: list[dict] = Field(default_factory=list)
+    sade_sati: dict = Field(default_factory=dict)
 
 # ─────────────────────────────────────────────────────────────
 # Upagraha

@@ -1,8 +1,9 @@
 """
 Ashtakavarga Engine — Layer F
 
-Computes Bhinna Ashtakavarga (BAV) for the 7 traditional planets
-and Sarva Ashtakavarga (SAV) for all 12 signs.
+Computes Bhinna Ashtakavarga (BAV) for the 7 traditional planets,
+Sarva Ashtakavarga (SAV) for all 12 signs, and performs
+Trikona and Ekadhipatya Shodhana reductions.
 """
 
 from __future__ import annotations
@@ -12,9 +13,11 @@ from jyotisha.models.schemas import Chart
 
 
 class AshtakavargaResult(BaseModel):
-    """Stores Ashtakavarga scores for a chart."""
+    """Stores Ashtakavarga scores and reductions for a chart."""
     bav: dict[str, list[int]] = Field(..., description="Bhinna Ashtakavarga for each planet (12 signs, index 0=Aries)")
     sav: list[int] = Field(..., description="Sarva Ashtakavarga (12 signs, index 0=Aries)")
+    trikona_reduction: dict[str, list[int]] = Field(default_factory=dict, description="BAV after Trikona Shodhana")
+    ekadhipatya_reduction: dict[str, list[int]] = Field(default_factory=dict, description="BAV after Ekadhipatya Shodhana")
 
 
 class AshtakavargaEngine:
@@ -91,7 +94,7 @@ class AshtakavargaEngine:
         "Saturn": {
             "Sun": [1, 2, 4, 7, 8, 10, 11],
             "Moon": [3, 6, 11],
-            "Mars": [3, 5, 6, 10, 11],
+            "Mars": [3, 5, 6, 10, 11, 12],
             "Mercury": [6, 8, 9, 10, 11, 12],
             "Jupiter": [5, 6, 11, 12],
             "Venus": [6, 11, 12],
@@ -121,14 +124,108 @@ class AshtakavargaEngine:
             for source_name, source_sign_num in sources.items():
                 if source_name in target_rules:
                     for rel_house in target_rules[source_name]:
-                        # rel_house is 1-indexed (1 means same sign as source)
                         target_sign_num = (source_sign_num + rel_house - 1) % 12
                         planet_bav[target_sign_num] += 1
             
             bav[target_planet] = planet_bav
             
-            # Add to Sarva Ashtakavarga
             for i in range(12):
                 sav[i] += planet_bav[i]
 
-        return AshtakavargaResult(bav=bav, sav=sav)
+        # Perform reductions (Shodhana) for each planet's BAV
+        trikona_red = {}
+        ekadhipatya_red = {}
+        for planet, scores in bav.items():
+            t_scores = self.trikona_shodhana(scores)
+            trikona_red[planet] = t_scores
+            ekadhipatya_red[planet] = self.ekadhipatya_shodhana(t_scores, chart)
+
+        return AshtakavargaResult(
+            bav=bav,
+            sav=sav,
+            trikona_reduction=trikona_red,
+            ekadhipatya_reduction=ekadhipatya_red
+        )
+
+    def trikona_shodhana(self, bav_scores: list[int]) -> list[int]:
+        """Perform trinal reduction on 12 sign scores."""
+        reduced = list(bav_scores)
+        trikonas = [
+            [0, 4, 8],   # Fire: Aries, Leo, Sagittarius
+            [1, 5, 9],   # Earth: Taurus, Virgo, Capricorn
+            [2, 6, 10],  # Air: Gemini, Libra, Aquarius
+            [3, 7, 11]   # Water: Cancer, Scorpio, Pisces
+        ]
+        for triad in trikonas:
+            a, b, c = triad
+            val_a, val_b, val_c = reduced[a], reduced[b], reduced[c]
+            
+            # Rule 4: all three equal
+            if val_a == val_b == val_c:
+                reduced[a] = reduced[b] = reduced[c] = 0
+                continue
+                
+            # Rule 3: any two are zero -> third also becomes zero
+            zeros = [val_a == 0, val_b == 0, val_c == 0]
+            if sum(zeros) == 2:
+                reduced[a] = reduced[b] = reduced[c] = 0
+                continue
+                
+            # Rule 1/2: subtract minimum
+            min_val = min(val_a, val_b, val_c)
+            reduced[a] -= min_val
+            reduced[b] -= min_val
+            reduced[c] -= min_val
+            
+        return reduced
+
+    def ekadhipatya_shodhana(self, bav_scores: list[int], chart: Chart) -> list[int]:
+        """Perform sole-ownership (dual lordship) reduction."""
+        reduced = list(bav_scores)
+        pairs = [
+            (0, 7),   # Mars: Aries and Scorpio
+            (1, 6),   # Venus: Taurus and Libra
+            (2, 5),   # Mercury: Gemini and Virgo
+            (8, 11),  # Jupiter: Sagittarius and Pisces
+            (9, 10)   # Saturn: Capricorn and Aquarius
+        ]
+        
+        # Check if a sign is occupied by any planet
+        occupied = [False] * 12
+        for sign_num in range(12):
+            if len(chart.planets_in_sign(sign_num)) > 0:
+                occupied[sign_num] = True
+
+        for s1, s2 in pairs:
+            v1, v2 = reduced[s1], reduced[s2]
+            
+            if v1 == 0 or v2 == 0:
+                continue
+                
+            occ1, occ2 = occupied[s1], occupied[s2]
+            
+            if occ1 and occ2:
+                continue
+                
+            if occ1 != occ2:
+                if occ1:
+                    v_occ, v_unocc = v1, v2
+                    unocc_idx = s2
+                else:
+                    v_occ, v_unocc = v2, v1
+                    unocc_idx = s1
+                    
+                if v_occ >= v_unocc:
+                    reduced[unocc_idx] = 0
+                else:
+                    reduced[unocc_idx] = v_occ
+                    
+            else:  # both unoccupied
+                if v1 == v2:
+                    reduced[s1] = reduced[s2] = 0
+                elif v1 > v2:
+                    reduced[s1] = v2
+                else:
+                    reduced[s2] = v1
+                    
+        return reduced

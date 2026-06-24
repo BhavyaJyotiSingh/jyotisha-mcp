@@ -1,0 +1,18 @@
+{
+  "name": "hist_1880_9",
+  "datetime_str": "1880-09-14T06:06:00",
+  "latitude": -30.306918577117667,
+  "longitude": -16.54771622246939,
+  "expected_ascendant": "Virgo",
+  "expected_planets": {
+    "Sun": "Leo",
+    "Moon": "Capricorn",
+    "Mercury": "Leo",
+    "Venus": "Virgo",
+    "Mars": "Virgo",
+    "Jupiter": "Pisces",
+    "Saturn": "Aries",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

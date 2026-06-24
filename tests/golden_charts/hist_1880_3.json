@@ -1,0 +1,18 @@
+{
+  "name": "hist_1880_3",
+  "datetime_str": "1880-03-16T06:34:00",
+  "latitude": -26.7688151274975,
+  "longitude": 104.52341773936104,
+  "expected_ascendant": "Pisces",
+  "expected_planets": {
+    "Sun": "Pisces",
+    "Moon": "Taurus",
+    "Mercury": "Pisces",
+    "Venus": "Aquarius",
+    "Mars": "Taurus",
+    "Jupiter": "Pisces",
+    "Saturn": "Pisces",
+    "Rahu": "Sagittarius",
+    "Ketu": "Gemini"
+  }
+}

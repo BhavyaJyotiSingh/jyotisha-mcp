@@ -7,7 +7,7 @@ and unknown birth time proxies.
 """
 
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 try:
@@ -122,7 +122,6 @@ class CalendarEngine:
             # Use Local Mean Time (LMT) calculated directly from longitude
             # 15 degrees = 1 hour, so longitude / 15 = hours offset
             utc_offset = longitude / 15.0
-            from datetime import timedelta
             utc_dt = (local_naive - timedelta(hours=utc_offset)).replace(tzinfo=timezone.utc)
             dst_active = False
             if local_naive.year < 1900:
@@ -131,7 +130,8 @@ class CalendarEngine:
                 notes.append("Timezone libraries unavailable; falling back to LMT based on longitude.")
 
         # Handle pre-Gregorian dates strictly (Before Oct 15, 1582)
-        if utc_dt.year < 1582 or (utc_dt.year == 1582 and utc_dt.month < 10) or (utc_dt.year == 1582 and utc_dt.month == 10 and utc_dt.day < 15):
+        local_date = local_naive.date()
+        if local_date < datetime(1582, 10, 15).date():
             if calendar == "Gregorian":
                 calendar = "Julian"
                 notes.append("Date before Oct 15, 1582; automatically using Julian calendar.")
@@ -191,7 +191,12 @@ class CalendarEngine:
     def _compute_julian_day(dt: datetime, calendar: str = "Gregorian") -> float:
         """Compute Julian Day Number from datetime."""
         if HAS_SWISSEPH:
-            hour_decimal = dt.hour + dt.minute / 60.0 + dt.second / 3600.0
+            hour_decimal = (
+                dt.hour
+                + dt.minute / 60.0
+                + dt.second / 3600.0
+                + dt.microsecond / 3_600_000_000.0
+            )
             if calendar == "Julian":
                 return swe.julday(dt.year, dt.month, dt.day, hour_decimal, swe.JUL_CAL)
             else:
@@ -200,7 +205,12 @@ class CalendarEngine:
             # Manual Julian Day computation (Meeus algorithm)
             y = dt.year
             m = dt.month
-            d = dt.day + (dt.hour + dt.minute / 60.0 + dt.second / 3600.0) / 24.0
+            d = dt.day + (
+                dt.hour
+                + dt.minute / 60.0
+                + dt.second / 3600.0
+                + dt.microsecond / 3_600_000_000.0
+            ) / 24.0
 
             if m <= 2:
                 y -= 1

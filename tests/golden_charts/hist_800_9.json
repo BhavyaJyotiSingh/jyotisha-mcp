@@ -1,0 +1,18 @@
+{
+  "name": "hist_800_9",
+  "datetime_str": "0800-09-11T08:09:00",
+  "latitude": -18.46862378924112,
+  "longitude": 63.238590961565734,
+  "expected_ascendant": "Libra",
+  "expected_planets": {
+    "Sun": "Virgo",
+    "Moon": "Taurus",
+    "Mercury": "Virgo",
+    "Venus": "Leo",
+    "Mars": "Leo",
+    "Jupiter": "Aquarius",
+    "Saturn": "Leo",
+    "Rahu": "Capricorn",
+    "Ketu": "Cancer"
+  }
+}

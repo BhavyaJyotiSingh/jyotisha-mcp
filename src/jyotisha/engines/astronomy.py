@@ -10,6 +10,8 @@ Reference: Swiss Ephemeris documentation (https://www.astro.com/swisseph/)
 
 from __future__ import annotations
 from datetime import datetime, timezone
+from pathlib import Path
+from threading import RLock
 from typing import Optional
 
 try:
@@ -27,10 +29,42 @@ from jyotisha.constants import (
     COMBUSTION_DISTANCE, COMBUSTION_DISTANCE_RETRO,
     SIGN_LORDS, SPECIAL_ASPECTS,
 )
-from jyotisha.models.schemas import (
-    PlanetPosition, DignityInfo, Ascendant, House, Chart, ChartMetadata,
-    BirthEvent, Location
-)
+from jyotisha.models.schemas import DignityInfo
+
+
+_SWE_LOCK = RLock()
+
+
+def compute_graha_yuddhas(planets_data: dict[str, dict]) -> dict[str, str]:
+    """Return classical planetary-war outcomes for the five Tara Grahas."""
+    tara_grahas = (
+        Planet.MARS,
+        Planet.MERCURY,
+        Planet.JUPITER,
+        Planet.VENUS,
+        Planet.SATURN,
+    )
+    outcomes: dict[str, str] = {}
+    for index, first_name in enumerate(tara_grahas):
+        if first_name not in planets_data:
+            continue
+        for second_name in tara_grahas[index + 1 :]:
+            if second_name not in planets_data:
+                continue
+            first = planets_data[first_name]
+            second = planets_data[second_name]
+            separation = AstronomicalEngine._angular_distance(
+                first["longitude"], second["longitude"]
+            )
+            if separation > 1.0:
+                continue
+            if first.get("latitude", 0.0) > second.get("latitude", 0.0):
+                winner, loser = first_name, second_name
+            else:
+                winner, loser = second_name, first_name
+            outcomes[winner] = f"Won against {loser.value}"
+            outcomes[loser] = f"Lost to {winner.value}"
+    return {planet.value: outcome for planet, outcome in outcomes.items()}
 
 
 class AstronomicalEngine:
@@ -51,16 +85,16 @@ class AstronomicalEngine:
         if not HAS_SWISSEPH:
             raise RuntimeError("pyswisseph is required for production Jyotisha computations.")
 
-        self.ayanamsha_id = ayanamsha
+        self.ayanamsha_id = int(ayanamsha)
         self.true_nodes = true_nodes
         self.topocentric = topocentric
 
         if ephe_path:
-            try:
-                swe.set_ephe_path(ephe_path)
-            except Exception as e:
-                import warnings
-                warnings.warn(f"Failed to set ephemeris path '{ephe_path}': {e}. Using built-in ephemeris.")
+            resolved_path = Path(ephe_path).expanduser().resolve(strict=True)
+            if not resolved_path.is_dir():
+                raise ValueError(f"Ephemeris path is not a directory: {resolved_path}")
+            with _SWE_LOCK:
+                swe.set_ephe_path(str(resolved_path))
 
     # ─────────────────────────────────────────────────────────
     # Core Position Computation
@@ -86,38 +120,39 @@ class AstronomicalEngine:
             Dictionary keyed by planet name with position data.
         """
         
-        swe.set_sid_mode(self.ayanamsha_id)
-
-        flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL
-        if self.topocentric:
-            swe.set_topo(lon, lat, alt)
-            flags |= swe.FLG_TOPOCTR
-
+        flags = swe.FLG_SWIEPH | swe.FLG_SIDEREAL | swe.FLG_SPEED
         results = {}
 
-        # Compute each planet
-        for planet_name, planet_id in SWIEPH_PLANET_IDS.items():
-            # Use mean node if configured
-            if planet_name == Planet.RAHU and not self.true_nodes:
-                planet_id = RAHU_MEAN_NODE_ID
+        # Swiss Ephemeris uses process-global sidereal/topocentric state.
+        with _SWE_LOCK:
+            swe.set_sid_mode(self.ayanamsha_id)
+            if self.topocentric:
+                swe.set_topo(lon, lat, alt)
+                flags |= swe.FLG_TOPOCTR
 
-            try:
-                pos, ret_flags = swe.calc_ut(jd, planet_id, flags)
-            except Exception as e:
-                raise RuntimeError(f"Swiss Ephemeris error for {planet_name}: {e}")
+            for planet_name, planet_id in SWIEPH_PLANET_IDS.items():
+                if planet_name == Planet.RAHU and not self.true_nodes:
+                    planet_id = RAHU_MEAN_NODE_ID
 
-            ecl_lon = pos[0] % 360.0
-            ecl_lat = pos[1]
-            distance = pos[2]
-            speed = pos[3]
+                try:
+                    pos, ret_flags = swe.calc_ut(jd, planet_id, flags)
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Swiss Ephemeris error for {planet_name}: {exc}"
+                    ) from exc
+                if ret_flags < 0:
+                    raise RuntimeError(
+                        f"Swiss Ephemeris returned error flags {ret_flags} "
+                        f"for {planet_name}"
+                    )
 
-            results[planet_name] = self._build_position_data(
-                name=planet_name,
-                longitude=ecl_lon,
-                latitude=ecl_lat,
-                distance=distance,
-                speed=speed,
-            )
+                results[planet_name] = self._build_position_data(
+                    name=planet_name,
+                    longitude=pos[0],
+                    latitude=pos[1],
+                    distance=pos[2],
+                    speed=pos[3],
+                )
 
         # Ketu = 180° opposite Rahu
         rahu_lon = results[Planet.RAHU]["longitude"]
@@ -141,30 +176,19 @@ class AstronomicalEngine:
                 threshold = COMBUSTION_DISTANCE_RETRO[Planet(planet_name)]
             p["combust"] = dist < threshold
 
-        # Planetary War (Graha Yuddha)
-        # Tara Grahas: Mars, Mercury, Jupiter, Venus, Saturn
-        tara_grahas = [Planet.MARS, Planet.MERCURY, Planet.JUPITER, Planet.VENUS, Planet.SATURN]
-        for name in tara_grahas:
-            results[name]["in_war"] = False
-            results[name]["war_winner"] = False
-
-        for i, p1_name in enumerate(tara_grahas):
-            for p2_name in tara_grahas[i+1:]:
-                p1 = results[p1_name]
-                p2 = results[p2_name]
-                dist = self._angular_distance(p1["longitude"], p2["longitude"])
-                if dist <= 1.0:
-                    p1["in_war"] = True
-                    p2["in_war"] = True
-                    # Winner is the one with higher northern latitude (ecliptic latitude)
-                    if p1["latitude"] > p2["latitude"]:
-                        p1["war_winner"] = True
-                        p2["war_winner"] = False
-                    elif p2["latitude"] > p1["latitude"]:
-                        p2["war_winner"] = True
-                        p1["war_winner"] = False
+        war_outcomes = compute_graha_yuddhas(results)
+        for name, data in results.items():
+            outcome = war_outcomes.get(name)
+            data["in_war"] = outcome is not None
+            data["war_winner"] = bool(outcome and outcome.startswith("Won"))
+            data["planetary_war"] = outcome
 
         return results
+
+    @property
+    def ephemeris_version(self) -> str:
+        """Return the linked Swiss Ephemeris library version."""
+        return str(swe.version)
 
     def compute_ascendant(
         self,
@@ -186,13 +210,26 @@ class AstronomicalEngine:
         Returns:
             Dictionary with ascendant data and house cusps.
         """
-        swe.set_sid_mode(self.ayanamsha_id)
+        if not -90.0 <= lat <= 90.0:
+            raise ValueError("Latitude must be between -90 and 90 degrees")
+        if not -180.0 <= lon <= 180.0:
+            raise ValueError("Longitude must be between -180 and 180 degrees")
+        if isinstance(house_system, str):
+            if len(house_system) != 1 or not house_system.isascii():
+                raise ValueError("House system must be one ASCII character")
+            house_code = house_system.encode("ascii")
+        else:
+            house_code = house_system
 
-        cusps, ascmc = swe.houses_ex(
-            jd, lat, lon,
-            house_system.encode('ascii') if isinstance(house_system, str) else house_system,
-            swe.FLG_SIDEREAL
-        )
+        with _SWE_LOCK:
+            swe.set_sid_mode(self.ayanamsha_id)
+            cusps, ascmc = swe.houses_ex(
+                jd, lat, lon, house_code, swe.FLG_SIDEREAL
+            )
+        if len(cusps) != 12:
+            raise RuntimeError(
+                f"Swiss Ephemeris returned {len(cusps)} house cusps; expected 12"
+            )
 
         asc_lon = ascmc[0] % 360.0
         mc_lon = ascmc[1] % 360.0
@@ -205,13 +242,19 @@ class AstronomicalEngine:
         return {
             "ascendant": asc_data,
             "mc": mc_lon,
-            "cusps": [c % 360.0 for c in cusps[1:13]],  # Houses 1-12
+            "cusps": [c % 360.0 for c in cusps],
         }
 
     def get_ayanamsha_value(self, jd: float) -> float:
         """Get the ayanamsha value for a given Julian Day."""
-        swe.set_sid_mode(self.ayanamsha_id)
-        return swe.get_ayanamsa_ut(jd)
+        with _SWE_LOCK:
+            swe.set_sid_mode(self.ayanamsha_id)
+            return swe.get_ayanamsa_ut(jd)
+
+    def get_delta_t(self, jd: float) -> float:
+        """Return Delta T (TT - UT) in seconds for a Julian Day."""
+        with _SWE_LOCK:
+            return swe.deltat(jd) * 86400.0
 
     # ─────────────────────────────────────────────────────────
     # Sunrise / Sunset
@@ -229,20 +272,9 @@ class AstronomicalEngine:
 
         Uses Swiss Ephemeris rise/set function with atmospheric refraction.
         """
-        swe.set_topo(lon, lat, alt)
-
-        # SE_CALC_RISE = 1, SE_BIT_DISC_CENTER = 256
-        try:
-            result = swe.rise_trans(
-                jd, swe.SUN, "", 0,
-                1 | 256,  # Rise + disc center
-                [lon, lat, alt, 0, 0, 0],
-                1013.25, 15.0  # Standard pressure and temp
-            )
-            return result[1][0]
-        except Exception:
-            # Fallback: approximate sunrise (6:00 local, +0.25 days from midnight)
-            return jd + 0.25
+        return self._compute_rise_set(
+            jd, swe.SUN, swe.CALC_RISE | swe.BIT_DISC_CENTER, lat, lon, alt
+        )
 
     def compute_sunset(
         self,
@@ -252,19 +284,81 @@ class AstronomicalEngine:
         alt: float = 0.0,
     ) -> float:
         """Compute sunset time as Julian Day."""
-        swe.set_topo(lon, lat, alt)
+        return self._compute_rise_set(
+            jd, swe.SUN, swe.CALC_SET | swe.BIT_DISC_CENTER, lat, lon, alt
+        )
 
+    def compute_moonrise(
+        self, jd: float, lat: float, lon: float, alt: float = 0.0
+    ) -> float:
+        """Compute the next moonrise at or after ``jd``."""
+        return self._compute_rise_set(
+            jd, swe.MOON, swe.CALC_RISE | swe.BIT_DISC_CENTER, lat, lon, alt
+        )
+
+    def compute_moonset(
+        self, jd: float, lat: float, lon: float, alt: float = 0.0
+    ) -> float:
+        """Compute the next moonset at or after ``jd``."""
+        return self._compute_rise_set(
+            jd, swe.MOON, swe.CALC_SET | swe.BIT_DISC_CENTER, lat, lon, alt
+        )
+
+    def compute_twilight(
+        self,
+        jd: float,
+        lat: float,
+        lon: float,
+        kind: str = "civil",
+        morning: bool = True,
+        alt: float = 0.0,
+    ) -> float:
+        """Compute civil, nautical, or astronomical dawn/dusk."""
+        twilight_bits = {
+            "civil": swe.BIT_CIVIL_TWILIGHT,
+            "nautical": swe.BIT_NAUTIC_TWILIGHT,
+            "astronomical": swe.BIT_ASTRO_TWILIGHT,
+        }
         try:
-            result = swe.rise_trans(
-                jd, swe.SUN, "", 0,
-                2 | 256,  # Set + disc center
-                [lon, lat, alt, 0, 0, 0],
-                1013.25, 15.0
+            twilight_bit = twilight_bits[kind.lower()]
+        except KeyError as exc:
+            raise ValueError(
+                "Twilight kind must be civil, nautical, or astronomical"
+            ) from exc
+        event = swe.CALC_RISE if morning else swe.CALC_SET
+        return self._compute_rise_set(
+            jd, swe.SUN, event | twilight_bit, lat, lon, alt
+        )
+
+    @staticmethod
+    def _compute_rise_set(
+        jd: float,
+        body: int,
+        event_flags: int,
+        lat: float,
+        lon: float,
+        alt: float,
+    ) -> float:
+        if not -90.0 <= lat <= 90.0:
+            raise ValueError("Latitude must be between -90 and 90 degrees")
+        if not -180.0 <= lon <= 180.0:
+            raise ValueError("Longitude must be between -180 and 180 degrees")
+        with _SWE_LOCK:
+            swe.set_topo(lon, lat, alt)
+            status, times = swe.rise_trans(
+                jd,
+                body,
+                event_flags,
+                (lon, lat, alt),
+                1013.25,
+                15.0,
             )
-            return result[1][0]
-        except Exception:
-            # Fallback: approximate sunset (18:00 local, +0.75 days from midnight)
-            return jd + 0.75
+        if status != 0:
+            raise RuntimeError(
+                "Requested rise/set event does not occur for the supplied "
+                f"date and location (Swiss Ephemeris status {status})"
+            )
+        return times[0]
 
     # ─────────────────────────────────────────────────────────
     # Julian Day Conversion
@@ -275,7 +369,12 @@ class AstronomicalEngine:
         """Convert a datetime to Julian Day Number (UT)."""
         if dt.tzinfo is not None:
             dt = dt.astimezone(timezone.utc)
-        hour_decimal = dt.hour + dt.minute / 60.0 + dt.second / 3600.0
+        hour_decimal = (
+            dt.hour
+            + dt.minute / 60.0
+            + dt.second / 3600.0
+            + dt.microsecond / 3_600_000_000.0
+        )
         return swe.julday(dt.year, dt.month, dt.day, hour_decimal)
 
     @staticmethod
@@ -321,15 +420,15 @@ class AstronomicalEngine:
 
         return {
             "name": name,
-            "longitude": round(lon, 6),
-            "latitude": round(latitude, 6),
-            "distance": round(distance, 6),
-            "speed": round(speed, 6),
+            "longitude": lon,
+            "latitude": latitude,
+            "distance": distance,
+            "speed": speed,
             "retrograde": speed < 0,
             "combust": False,
             "sign": SIGN_NAMES[sign_num],
             "sign_number": sign_num,
-            "degree_in_sign": round(degree_in_sign, 4),
+            "degree_in_sign": degree_in_sign,
             "nakshatra": NAKSHATRA_NAMES[nakshatra_num],
             "nakshatra_number": nakshatra_num,
             "pada": pada,

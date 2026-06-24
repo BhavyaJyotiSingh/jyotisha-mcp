@@ -11,11 +11,15 @@ Computes the six-fold strength (Shadbala) of the traditional planets:
 """
 
 from __future__ import annotations
-from typing import Optional
 from jyotisha.constants import (
-    Planet, EXALTATION, DEBILITATION, NATURAL_BENEFICS, NATURAL_MALEFICS, Sign
+    EXALTATION,
+    NATURAL_BENEFICS,
+    NATURAL_MALEFICS,
+    Planet,
 )
 from jyotisha.models.schemas import Chart, ShadBala, PlanetPosition
+from jyotisha.engines.varga import VargaEngine
+from jyotisha.engines.astronomy import compute_dignity
 
 
 class PlanetaryStrengthEngine:
@@ -56,6 +60,9 @@ class PlanetaryStrengthEngine:
         "Venus": 4,
         "Saturn": 7,
     }
+
+    def __init__(self):
+        self.varga_engine = VargaEngine()
 
     def compute_shadbala(self, chart: Chart) -> dict[str, ShadBala]:
         """
@@ -108,10 +115,8 @@ class PlanetaryStrengthEngine:
 
         return results
 
-    def _compute_sthana_bala(self, planet: PlanetPosition) -> float:
-        """Sthana Bala = Uchcha Bala + Saptavargaja + Ojhayugmabaladi + Kendradi + Drekkana"""
-        # 1. Uchcha Bala
-        uchcha_bala = 0.0
+    def _compute_uchcha_bala(self, planet: PlanetPosition) -> float:
+        """Compute Uchcha Bala based on distance from debilitation point."""
         try:
             p_enum = Planet(planet.name)
             if p_enum in EXALTATION:
@@ -121,37 +126,72 @@ class PlanetaryStrengthEngine:
                 diff = abs(planet.longitude - deb_deg) % 360.0
                 diff = min(diff, 360.0 - diff)
                 
-                uchcha_bala = 60.0 * (diff / 180.0)
+                return 60.0 * (diff / 180.0)
         except Exception:
-            uchcha_bala = 30.0
+            return 30.0
+        return 30.0
 
-        # 2. Saptavargaja Bala (Approximated to D1 Dignity for now)
-        dignity_score = 30.0
-        status = planet.dignity.status.value
+    def _compute_saptavargaja_score(self, planet_name: str, sign_number: int, degree_in_sign: float) -> float:
+        """Compute Saptavargaja score for a single varga."""
+        dignity = compute_dignity(planet_name, sign_number, degree_in_sign)
+        status = dignity.status.value
+        
         if status == "Exalted":
-            dignity_score = 60.0
+            return 60.0
         elif status == "Moolatrikona":
-            dignity_score = 45.0
+            return 45.0
         elif status == "Own Sign":
-            dignity_score = 30.0
+            return 30.0
         elif status == "Friendly":
-            dignity_score = 15.0
+            return 15.0
         elif status == "Neutral":
-            dignity_score = 7.5
+            return 7.5
         elif status == "Enemy":
-            dignity_score = 3.75
+            return 3.75
         elif status == "Debilitated":
-            dignity_score = 1.875
+            return 1.875
+        return 7.5
+
+    def _compute_sthana_bala(self, planet: PlanetPosition) -> float:
+        """Sthana Bala = Uchcha Bala + Saptavargaja + Ojhayugmabaladi + Kendradi + Drekkana"""
+        # 1. Uchcha Bala
+        uchcha_bala = self._compute_uchcha_bala(planet)
+
+        # 2. Saptavargaja Bala (Sum across 7 vargas: D1, D2, D3, D7, D9, D12, D30)
+        saptavargaja_bala = 0.0
+        vargas = [1, 2, 3, 7, 9, 12, 30]
+        for div in vargas:
+            if div == 1:
+                varga_sign = int(planet.longitude // 30) % 12
+                varga_deg = planet.longitude % 30
+            else:
+                varga_sign = self.varga_engine.compute_varga_sign(planet.longitude, div)
+                varga_deg = self.varga_engine.compute_varga_degree(planet.longitude, div)
+            saptavargaja_bala += self._compute_saptavargaja_score(planet.name, varga_sign, varga_deg)
+        
+        saptavargaja_scaled = saptavargaja_bala / 7.0
 
         # 3. Ojhayugmabaladi Bala
-        sign_parity = planet.sign_number % 2
         ojha_bala = 0.0
+        
+        # D1 Parity
+        sign_parity = planet.sign_number % 2
         if planet.name in ["Sun", "Mars", "Jupiter", "Mercury", "Saturn"]:
             if sign_parity == 0:  # Odd sign
-                ojha_bala = 15.0
+                ojha_bala += 15.0
         else:
             if sign_parity == 1:  # Even sign
-                ojha_bala = 15.0
+                ojha_bala += 15.0
+                
+        # D9 Parity
+        navamsha_sign = self.varga_engine.compute_varga_sign(planet.longitude, 9)
+        nav_parity = navamsha_sign % 2
+        if planet.name in ["Sun", "Mars", "Jupiter", "Mercury", "Saturn"]:
+            if nav_parity == 0:  # Odd sign
+                ojha_bala += 15.0
+        else:
+            if nav_parity == 1:  # Even sign
+                ojha_bala += 15.0
 
         # 4. Kendradi Bala
         kendradi_bala = 15.0
@@ -176,7 +216,7 @@ class PlanetaryStrengthEngine:
         elif planet.name in female_planets and drekkana_idx == 2:
             drekkana_bala = 15.0
 
-        return uchcha_bala + dignity_score + ojha_bala + kendradi_bala + drekkana_bala
+        return uchcha_bala + saptavargaja_scaled + ojha_bala + kendradi_bala + drekkana_bala
 
     def _compute_dig_bala(self, planet: PlanetPosition) -> float:
         """Dig Bala calculation."""
@@ -227,7 +267,14 @@ class PlanetaryStrengthEngine:
             
             proportion = diff / 180.0 if is_waxing else (360.0 - diff) / 180.0
             
-            if planet.name in NATURAL_BENEFICS or (planet.name == "Moon" and is_waxing):
+            try:
+                planet_enum = Planet(planet.name)
+            except ValueError:
+                planet_enum = None
+                
+            if planet_enum in NATURAL_BENEFICS or (
+                planet.name == "Moon" and is_waxing
+            ):
                 paksha_bala = 60.0 * proportion
             else:
                 paksha_bala = 60.0 * (1.0 - proportion)
@@ -242,13 +289,19 @@ class PlanetaryStrengthEngine:
         else:
             third_of_day = int(((hour - 6.0) % 24.0) / 4.0)  # 0 to 5 (0,1,2 = day thirds, 3,4,5 = night thirds)
             if is_day:
-                if third_of_day == 0 and planet.name == "Mercury": tribhaga_bala = 60.0
-                elif third_of_day == 1 and planet.name == "Sun": tribhaga_bala = 60.0
-                elif third_of_day == 2 and planet.name == "Saturn": tribhaga_bala = 60.0
+                if third_of_day == 0 and planet.name == "Mercury":
+                    tribhaga_bala = 60.0
+                elif third_of_day == 1 and planet.name == "Sun":
+                    tribhaga_bala = 60.0
+                elif third_of_day == 2 and planet.name == "Saturn":
+                    tribhaga_bala = 60.0
             else:
-                if third_of_day == 3 and planet.name == "Moon": tribhaga_bala = 60.0
-                elif third_of_day == 4 and planet.name == "Venus": tribhaga_bala = 60.0
-                elif third_of_day == 5 and planet.name == "Mars": tribhaga_bala = 60.0
+                if third_of_day == 3 and planet.name == "Moon":
+                    tribhaga_bala = 60.0
+                elif third_of_day == 4 and planet.name == "Venus":
+                    tribhaga_bala = 60.0
+                elif third_of_day == 5 and planet.name == "Mars":
+                    tribhaga_bala = 60.0
 
         return natonnata + paksha_bala + tribhaga_bala
 
@@ -258,7 +311,6 @@ class PlanetaryStrengthEngine:
             return 60.0
             
         if planet.name in ["Sun", "Moon"]:
-            import math
             # Ayana Bala approximation: using Sayana longitude
             sayana_long = (planet.longitude + 24.0) % 360.0
             is_north = sayana_long < 180.0
@@ -300,3 +352,151 @@ class PlanetaryStrengthEngine:
                 net_drishti -= 15.0
 
         return max(0.0, min(60.0, 30.0 + net_drishti))
+
+    # ─────────────────────────────────────────────────────────
+    # Vimsopaka Bala
+    # ─────────────────────────────────────────────────────────
+
+    def compute_vimsopaka_bala(self, chart: Chart, scheme: str = "Dashavarga") -> dict[str, float]:
+        """
+        Compute Vimsopaka Bala (Varga Vimshopakam) for all traditional planets
+        based on the selected scheme: Shadvarga, Saptavarga, Dashavarga, or Shodashavarga.
+        Returns a dictionary mapping planet name to its Vimsopaka Bala score (0 to 20).
+        """
+        schemes = {
+            "Shadvarga": {1: 6, 2: 2, 3: 4, 9: 5, 12: 2, 30: 1},
+            "Saptavarga": {1: 5, 2: 2, 3: 3, 7: 1, 9: 2.5, 12: 4.5, 30: 2},
+            "Dashavarga": {1: 3, 2: 1.5, 3: 1.5, 7: 0.5, 9: 1.5, 10: 1.5, 12: 1.5, 16: 1.5, 30: 1.5, 60: 5},
+            "Shodashavarga": {
+                1: 3.5, 2: 1, 3: 1, 4: 0.5, 7: 0.5, 9: 3, 10: 0.5, 12: 0.5,
+                16: 2, 20: 0.5, 24: 0.5, 27: 0.5, 30: 1, 40: 0.5, 45: 0.5, 60: 4
+            }
+        }
+        
+        selected_scheme = schemes.get(scheme, schemes["Dashavarga"])
+        results = {}
+        planets_to_compute = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
+        
+        for name in planets_to_compute:
+            p_data = chart.get_planet(name)
+            if not p_data:
+                continue
+                
+            total_weighted_points = 0.0
+            for div, weight in selected_scheme.items():
+                if div == 1:
+                    v_sign = int(p_data.longitude // 30) % 12
+                    v_deg = p_data.longitude % 30
+                else:
+                    v_sign = self.varga_engine.compute_varga_sign(p_data.longitude, div)
+                    v_deg = self.varga_engine.compute_varga_degree(p_data.longitude, div)
+                
+                dignity = compute_dignity(name, v_sign, v_deg)
+                status = dignity.status.value
+                
+                if status in ["Exalted", "Moolatrikona", "Own Sign"]:
+                    v_points = 20.0
+                elif status == "Friendly":
+                    v_points = 15.0
+                elif status == "Neutral":
+                    v_points = 10.0
+                elif status == "Enemy":
+                    v_points = 7.0
+                elif status == "Debilitated":
+                    v_points = 5.0
+                else:
+                    v_points = 10.0
+                    
+                total_weighted_points += v_points * weight
+                
+            results[name] = round(total_weighted_points / 20.0, 2)
+            
+        return results
+
+    # ─────────────────────────────────────────────────────────
+    # Ishta and Kashta Bala
+    # ─────────────────────────────────────────────────────────
+
+    def compute_ishta_kashta_bala(self, planet: PlanetPosition) -> tuple[float, float]:
+        """
+        Compute Ishta and Kashta Bala for a planet.
+        Ishta = sqrt(Uchcha * Cheshta)
+        Kashta = sqrt((60 - Uchcha) * (60 - Cheshta))
+        """
+        uchcha = self._compute_uchcha_bala(planet)
+        cheshta = self._compute_cheshta_bala(planet)
+        
+        ishta = (uchcha * cheshta) ** 0.5
+        kashta = ((60.0 - uchcha) * (60.0 - cheshta)) ** 0.5
+        return round(ishta, 2), round(kashta, 2)
+
+    # ─────────────────────────────────────────────────────────
+    # Planetary States (Avasthas)
+    # ─────────────────────────────────────────────────────────
+
+    def compute_baladi_avastha(self, planet: PlanetPosition) -> str:
+        """Baladi Avasthas based on sign parity and degree."""
+        deg = planet.degree_in_sign
+        sign_parity = planet.sign_number % 2
+        
+        if sign_parity == 0:  # Odd sign
+            if 0.0 <= deg < 6.0:
+                return "Bala"
+            elif 6.0 <= deg < 12.0:
+                return "Kumara"
+            elif 12.0 <= deg < 18.0:
+                return "Yuva"
+            elif 18.0 <= deg < 24.0:
+                return "Vriddha"
+            else:
+                return "Mrita"
+        else:  # Even sign
+            if 0.0 <= deg < 6.0:
+                return "Mrita"
+            elif 6.0 <= deg < 12.0:
+                return "Vriddha"
+            elif 12.0 <= deg < 18.0:
+                return "Yuva"
+            elif 18.0 <= deg < 24.0:
+                return "Kumara"
+            else:
+                return "Bala"
+
+    def compute_jagradadi_avastha(self, planet: PlanetPosition) -> str:
+        """Jagradadi Avasthas based on dignity status."""
+        status = planet.dignity.status.value
+        if status in ["Exalted", "Moolatrikona", "Own Sign"]:
+            return "Jaagrat"
+        elif status in ["Friendly", "Neutral"]:
+            return "Swapna"
+        else:  # Enemy, Debilitated
+            return "Sushupti"
+
+    def compute_deeptadi_avastha(self, planet: PlanetPosition, chart: Chart) -> str:
+        """Deeptadi Avasthas based on combustion, malefic conjunction, and dignity."""
+        if planet.combust and planet.name != "Sun":
+            return "Kopa"
+            
+        # Check if conjunct a malefic in the same house
+        malefics = ["Sun", "Mars", "Saturn", "Rahu", "Ketu"]
+        conjunct_planets = [p for p in chart.planets if p.house == planet.house and p.name != planet.name]
+        is_vikala = any(p.name in malefics for p in conjunct_planets)
+        
+        if is_vikala:
+            return "Vikala"
+            
+        status = planet.dignity.status.value
+        if status == "Exalted":
+            return "Deepta"
+        elif status == "Moolatrikona" or status == "Own Sign":
+            return "Svastha"
+        elif status == "Friendly":
+            return "Shanta"
+        elif status == "Neutral":
+            return "Dina"
+        elif status == "Enemy":
+            return "Duhkhita"
+        elif status == "Debilitated":
+            return "Khala"
+        else:
+            return "Dina"

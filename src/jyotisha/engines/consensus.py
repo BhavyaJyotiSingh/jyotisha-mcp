@@ -7,7 +7,7 @@ and generates a unified consensus report with confidence scoring.
 
 
 from typing import Optional
-from jyotisha.models.schemas import Chart, SchoolResult, ConsensusPrediction
+from jyotisha.models.schemas import Chart, ConsensusPrediction
 from jyotisha.schools.parashara import ParasharaModule
 from jyotisha.schools.jaimini import JaiminiModule
 from jyotisha.schools.kp import KPModule
