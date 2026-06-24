@@ -219,20 +219,25 @@ class VargaEngine:
         return (starts[sign % 3] + part) % 12
 
     def _compute_shashtiamsa_sign(self, longitude: float) -> int:
-        """D60 Shashtiamsha: 60 parts of 0°30' each."""
+        """
+        D60 Shashtiamsha: 60 parts of 0°30' each.
+        Odd signs start from Aries (0), Even signs start from Sagittarius (8).
+        """
         sign = int(longitude // 30)
         deg = longitude % 30
         part = int(deg / 0.5)
-        return (sign + part) % 12
+        # Note: sign % 2 == 0 corresponds to physically ODD signs (Aries=0, Gemini=2, etc.)
+        if sign % 2 == 0:
+            return part % 12
+        else:
+            return (part + 8) % 12
 
     def _compute_navanavamsa_sign(self, longitude: float) -> int:
-        """D81 Navanavamsa: 81 parts of 0°22'13.33\" each. (D9 of D9)."""
-        sign = int(longitude // 30)
-        deg = longitude % 30
-        part = int(deg / (30.0 / 81.0))
-        element = sign % 4
-        starts = [0, 9, 6, 3]
-        return (starts[element] + part) % 12
+        """D81 Navanavamsa: D9 of D9 (Navamsa of Navamsa)."""
+        d9_sign = self._compute_navamsa_sign(longitude)
+        d9_deg = self.compute_varga_degree(longitude, 9)
+        d9_lon = d9_sign * 30.0 + d9_deg
+        return self._compute_navamsa_sign(d9_lon)
 
     def _compute_ashtottaramsa_sign(self, longitude: float) -> int:
         """D108 Ashtottaramsa: 108 parts of 0°16'40\" each."""

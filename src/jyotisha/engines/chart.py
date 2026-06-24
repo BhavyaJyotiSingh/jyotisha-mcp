@@ -46,7 +46,9 @@ def compute_graha_yuddhas(planets_data: dict[str, dict]) -> dict[str, str]:
     Returns a dict mapping planet name to its war status.
     """
     from jyotisha.constants import Planet
-    warring = [Planet.SUN.value, Planet.MOON.value, Planet.MARS.value, Planet.MERCURY.value, Planet.JUPITER.value, Planet.VENUS.value, Planet.SATURN.value, Planet.RAHU.value, Planet.KETU.value]
+    # Classical Graha Yuddha involves only the 5 Tara Grahas (BPHS Ch. 28).
+    # Sun, Moon, Rahu, and Ketu NEVER participate in planetary war.
+    warring = [Planet.MARS.value, Planet.MERCURY.value, Planet.JUPITER.value, Planet.VENUS.value, Planet.SATURN.value]
     results = {}
     
     # Compare all pairs

@@ -110,9 +110,62 @@ class ParasharaModule:
                 }
             )
             
+        elif question.lower() == "career":
+            lord_10 = chart.get_house_lord(10)
+            lord_11 = chart.get_house_lord(11)
+            lord_2 = chart.get_house_lord(2)
+            house_10 = chart.get_house(10)
+            occupants = house_10.planets_in_house if house_10 else []
+            
+            # Significators: 10th lord, 11th lord, 2nd lord, occupants, and Sun/Mercury/Saturn
+            significators = set([lord_10, lord_11, lord_2] + occupants + ["Sun", "Mercury", "Saturn"])
+            significators.discard(None)
+            
+            confidence = 0.0
+            rules = []
+            
+            if maha_lord in significators:
+                confidence += 0.4
+                rules.append(f"Mahadasha lord {maha_lord} signifies career (10th/11th/2nd connection or natural karaka).")
+            if antar_lord in significators:
+                confidence += 0.3
+                rules.append(f"Antardasha lord {antar_lord} signifies career.")
+                
+            # Aspect on 10th house
+            if maha_lord and house_10 and maha_lord in house_10.aspects_received:
+                confidence += 0.2
+                rules.append(f"Mahadasha lord {maha_lord} aspects 10th house of profession.")
+                
+            # Check 10th lord strength
+            if lord_10:
+                p_lord = chart.get_planet(lord_10)
+                if p_lord and p_lord.dignity.is_exalted:
+                    confidence += 0.1
+                    rules.append(f"10th house lord {lord_10} is Exalted, giving strong professional foundation.")
+                elif p_lord and p_lord.dignity.is_own_sign:
+                    confidence += 0.05
+                    rules.append(f"10th house lord {lord_10} is in its Own Sign.")
+            
+            confidence = min(1.0, confidence)
+            answer = "Favorable period for career progression/gains." if confidence > 0.4 else "Period does not indicate strong career progression."
+            
+            return SchoolResult(
+                school=self.school_name,
+                answer=answer,
+                confidence=round(confidence, 2),
+                sources=["BPHS Chapter on Profession"],
+                reasoning=f"Current Dasha is {maha_lord}/{antar_lord}. Significators are {list(significators)}.",
+                rules_fired=rules,
+                structured_data={
+                    "mahadasha": maha_lord,
+                    "antardasha": antar_lord,
+                    "significators": list(significators)
+                }
+            )
+            
         return SchoolResult(
             school=self.school_name,
-            answer="Prediction logic only implemented for marriage.",
+            answer="Prediction logic only implemented for marriage and career.",
             confidence=0.0
         )
 

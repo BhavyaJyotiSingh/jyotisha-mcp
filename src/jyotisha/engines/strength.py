@@ -114,9 +114,9 @@ class PlanetaryStrengthEngine:
         uchcha_bala = 0.0
         try:
             p_enum = Planet(planet.name)
-            if p_enum in EXALTATION and p_enum in DEBILITATION:
-                deb_sign = DEBILITATION[p_enum]
-                deb_deg = (deb_sign.value * 30.0 + EXALTATION[p_enum].exact_degree) % 360.0
+            if p_enum in EXALTATION:
+                exaltation_deg = (EXALTATION[p_enum].sign.value * 30.0 + EXALTATION[p_enum].exact_degree)
+                deb_deg = (exaltation_deg + 180.0) % 360.0
                 
                 diff = abs(planet.longitude - deb_deg) % 360.0
                 diff = min(diff, 360.0 - diff)
@@ -290,9 +290,13 @@ class PlanetaryStrengthEngine:
 
         net_drishti = 0.0
         for aspecting in house.aspects_received:
-            if aspecting in NATURAL_BENEFICS:
+            try:
+                asp_enum = Planet(aspecting)
+            except ValueError:
+                asp_enum = None
+            if asp_enum in NATURAL_BENEFICS:
                 net_drishti += 15.0
-            elif aspecting in NATURAL_MALEFICS:
+            elif asp_enum in NATURAL_MALEFICS:
                 net_drishti -= 15.0
 
         return max(0.0, min(60.0, 30.0 + net_drishti))

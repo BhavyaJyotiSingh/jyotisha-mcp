@@ -367,12 +367,10 @@ async def get_upagrahas(
         )
         event = chart.birth_event
         # Calculate midnight JD
-        from datetime import datetime
+        from datetime import datetime, timedelta
         midnight_dt = datetime(event.datetime_utc.year, event.datetime_utc.month, event.datetime_utc.day, 0, 0, 0)
         # Convert midnight to UTC based on offset
         utc_midnight_dt = midnight_dt - timedelta(hours=event.utc_offset_hours) if hasattr(event, 'utc_offset_hours') else midnight_dt
-        
-        from datetime import timedelta
         # Simple local time calculation
         midnight_jd = chart_engine.astro.datetime_to_jd(midnight_dt)
         sunrise_jd = chart_engine.astro.compute_sunrise(midnight_jd, latitude, longitude)

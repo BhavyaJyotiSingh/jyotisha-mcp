@@ -241,8 +241,8 @@ class AstronomicalEngine:
             )
             return result[1][0]
         except Exception:
-            # Fallback: approximate sunrise (6:00 local)
-            return jd
+            # Fallback: approximate sunrise (6:00 local, +0.25 days from midnight)
+            return jd + 0.25
 
     def compute_sunset(
         self,
@@ -263,7 +263,8 @@ class AstronomicalEngine:
             )
             return result[1][0]
         except Exception:
-            return jd + 0.5
+            # Fallback: approximate sunset (18:00 local, +0.75 days from midnight)
+            return jd + 0.75
 
     # ─────────────────────────────────────────────────────────
     # Julian Day Conversion

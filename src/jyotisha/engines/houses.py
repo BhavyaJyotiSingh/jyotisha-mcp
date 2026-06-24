@@ -38,7 +38,7 @@ class WholeSignHouseSystem(HouseSystemStrategy):
                 sign=SIGN_NAMES[sign_num],
                 sign_number=sign_num,
                 lord=SIGN_LORDS[sign].value,
-                cusp_longitude=(sign_num * 30.0 + 15.0) % 360.0,
+                cusp_longitude=(sign_num * 30.0) % 360.0,  # Cusp = sign start (0°), not midpoint
                 span_start=(sign_num * 30.0) % 360.0,
                 span_end=((sign_num + 1) * 30.0) % 360.0,
                 planets_in_house=[],

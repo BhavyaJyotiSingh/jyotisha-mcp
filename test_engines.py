@@ -142,6 +142,12 @@ def run_validations():
     print(f"   Success! Consensus Answer: {prediction.consensus_answer} (Confidence: {prediction.consensus_confidence})")
     print("   Explanations:")
     print(prediction.explanation)
+    
+    print("\n   Testing Consensus Career Prediction...")
+    career_pred = consensus.generate_consensus(chart, "career")
+    print(f"   Success! Career Consensus: {career_pred.consensus_answer} (Confidence: {career_pred.consensus_confidence})")
+    print("   Career Explanations:")
+    print(career_pred.explanation)
 
     # 8. Transit Engine
     print("\n8. Instantiating Transit Engine...")

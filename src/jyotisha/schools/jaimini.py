@@ -47,7 +47,7 @@ class JaiminiModule:
             dk = karakas.get("Darakaraka (DK) - Spouse/Partnership")
             arudha_engine = ArudhaEngine()
             arudhas = arudha_engine.compute_arudhas(chart)
-            ul = next((a for a in arudhas if a.house == 12), None)
+            ul = next((a for a in arudhas if "UL" in a.type), None)
             
             if dk and ul:
                 confidence = 0.0
@@ -84,6 +84,73 @@ class JaiminiModule:
                     reasoning=f"Darakaraka is {dk['planet']}. Upapada Lagna is {ul.sign}. Confidence based on transits over UL.",
                     rules_fired=rules,
                     structured_data={"darakaraka": dk['planet'], "dk_sign": dk['sign'], "ul_sign": ul.sign}
+                )
+                
+        elif question.lower() == "career":
+            amk = karakas.get("Amatyakaraka (AmK) - Career/Mind")
+            arudha_engine = ArudhaEngine()
+            arudhas = arudha_engine.compute_arudhas(chart)
+            al = next((a for a in arudhas if a.type == "AL"), None)
+            
+            if amk and al:
+                confidence = 0.0
+                rules = []
+                
+                # Check Jaimini aspects: Movable/Fixed/Dual
+                def rashi_aspects(s1_num: int, s2_num: int) -> bool:
+                    if s1_num == s2_num:
+                        return True
+                    from jyotisha.constants import SIGN_MODALITIES, Modality
+                    m1 = SIGN_MODALITIES[s1_num]
+                    m2 = SIGN_MODALITIES[s2_num]
+                    if m1 == Modality.MOVABLE and m2 == Modality.FIXED:
+                        return s2_num != (s1_num + 1) % 12
+                    if m1 == Modality.FIXED and m2 == Modality.MOVABLE:
+                        return s2_num != (s1_num - 1) % 12
+                    if m1 == Modality.DUAL and m2 == Modality.DUAL:
+                        return s1_num != s2_num
+                    return False
+                
+                amk_planet = chart.get_planet(amk["planet"])
+                amk_sign = amk_planet.sign_number if amk_planet else 0
+                al_sign = al.sign_number
+                
+                if target_date:
+                    from jyotisha.engines.transit import TransitEngine
+                    transit_engine = TransitEngine()
+                    transits = transit_engine.compute_transits(chart, target_date)
+                    
+                    jup_transit = next((t for t in transits.transit_planets if t.name == "Jupiter"), None)
+                    sat_transit = next((t for t in transits.transit_planets if t.name == "Saturn"), None)
+                    
+                    if jup_transit:
+                        if rashi_aspects(jup_transit.sign_number, amk_sign):
+                            confidence += 0.4
+                            rules.append(f"Transiting Jupiter aspects/occupies Amatyakaraka ({amk['planet']}) sign.")
+                        if rashi_aspects(jup_transit.sign_number, al_sign):
+                            confidence += 0.3
+                            rules.append("Transiting Jupiter aspects/occupies Arudha Lagna (AL).")
+                            
+                    if sat_transit:
+                        if rashi_aspects(sat_transit.sign_number, al_sign):
+                            confidence += 0.3
+                            rules.append("Transiting Saturn aspects/occupies Arudha Lagna (AL).")
+                            
+                if rashi_aspects(amk_sign, al_sign):
+                    confidence += 0.1
+                    rules.append(f"Amatyakaraka {amk['planet']} aspectually connects with Arudha Lagna (AL) in natal chart.")
+                    
+                confidence = min(1.0, confidence)
+                answer = "Favorable Jaimini indicators for career progression." if confidence > 0.4 else "No strong Jaimini indicators for career timing."
+                
+                return SchoolResult(
+                    school=self.school_name,
+                    answer=answer,
+                    confidence=confidence,
+                    sources=self.sources,
+                    reasoning=f"Amatyakaraka (AmK) is {amk['planet']}. Arudha Lagna (AL) is in {al.sign}.",
+                    rules_fired=rules,
+                    structured_data={"amatyakaraka": amk['planet'], "amk_sign": amk['sign'], "al_sign": al.sign}
                 )
                 
         return SchoolResult(

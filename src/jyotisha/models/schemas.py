@@ -6,7 +6,7 @@ These models are the canonical data contract between all system layers.
 """
 
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -73,6 +73,7 @@ class PlanetPosition(BaseModel):
     dignity: DignityInfo
     vargottama: bool = False
     pushkara_navamsa: bool = False
+    planetary_war: Optional[str] = None
 
 
 # ─────────────────────────────────────────────────────────────
@@ -122,7 +123,7 @@ class ChartMetadata(BaseModel):
     true_nodes: bool = True
     topocentric: bool = False
     engine_version: str = "0.1.0"
-    computed_at: datetime = Field(default_factory=datetime.utcnow)
+    computed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Chart(BaseModel):
     """Complete Vedic birth chart."""

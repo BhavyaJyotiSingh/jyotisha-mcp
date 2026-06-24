@@ -8,6 +8,7 @@ Implements KP system specific calculations:
 """
 
 
+from typing import Optional
 from jyotisha.models.schemas import Chart, SchoolResult
 from jyotisha.constants import (
     NAKSHATRA_SPAN, NAKSHATRA_LORDS, VIMSHOTTARI_YEARS,
@@ -38,7 +39,7 @@ class KPModule:
             "sources_used": self.sources
         }
 
-    def predict(self, chart: Chart, question: str) -> SchoolResult:
+    def predict(self, chart: Chart, question: str, target_date: Optional[str] = None) -> SchoolResult:
         """
         Generate a prediction based on KP principles.
         """
@@ -99,6 +100,63 @@ class KPModule:
                     reasoning=f"7th Lord ({lord_7}) Sub-Lord is {sub_lord_planet}. Its Star Lord ({star_of_sub}) signifies houses {significators}.",
                     rules_fired=rules,
                     structured_data={"cusp_7_lord": lord_7, "sub_lord": sub_lord_planet, "star_of_sub": star_of_sub, "signified": significators}
+                )
+                
+        elif question.lower() == "career":
+            lord_10 = chart.get_house_lord(10)
+            sub_10_info = planet_subs.get(lord_10)
+            
+            if sub_10_info:
+                sub_lord_planet = sub_10_info['sub_lord'].value
+                sl_star_info = planet_subs.get(sub_lord_planet)
+                
+                confidence = 0.0
+                rules = []
+                significators = []
+                star_of_sub = "Unknown"
+                
+                if sl_star_info:
+                    star_of_sub = sl_star_info['star_lord'].value
+                    star_planet_obj = chart.get_planet(star_of_sub)
+                    
+                    if star_planet_obj:
+                        house_placed = star_planet_obj.house
+                        houses_owned = []
+                        for h in chart.houses:
+                            if h.lord == star_of_sub:
+                                houses_owned.append(h.number)
+                                
+                        signified_houses = [house_placed] + houses_owned
+                        
+                        # 2, 6, 10, 11 are houses for career/wealth
+                        matches = [h for h in signified_houses if h in [2, 6, 10, 11]]
+                        
+                        if 10 in matches:
+                            confidence += 0.4
+                            rules.append(f"Star Lord of Sub Lord ({star_of_sub}) signifies 10th house (profession).")
+                        if 11 in matches:
+                            confidence += 0.3
+                            rules.append(f"Star Lord of Sub Lord ({star_of_sub}) signifies 11th house (gains).")
+                        if 6 in matches:
+                            confidence += 0.2
+                            rules.append(f"Star Lord of Sub Lord ({star_of_sub}) signifies 6th house (employment/service).")
+                        if 2 in matches:
+                            confidence += 0.1
+                            rules.append(f"Star Lord of Sub Lord ({star_of_sub}) signifies 2nd house (income/wealth).")
+                            
+                        significators = matches
+                        
+                confidence = min(1.0, confidence)
+                answer = "Strong KP promise for professional success." if confidence >= 0.5 else "Moderate or weak KP indicators for career progression."
+                
+                return SchoolResult(
+                    school=self.school_name,
+                    answer=answer,
+                    confidence=round(confidence, 2),
+                    sources=self.sources,
+                    reasoning=f"10th Lord ({lord_10}) Sub-Lord is {sub_lord_planet}. Its Star Lord ({star_of_sub}) signifies houses {significators}.",
+                    rules_fired=rules,
+                    structured_data={"cusp_10_lord": lord_10, "sub_lord": sub_lord_planet, "star_of_sub": star_of_sub, "signified": significators}
                 )
                 
         return SchoolResult(
@@ -202,8 +260,22 @@ class KPModule:
                 
                 weekday = local_dt.weekday()
                 
-                # Vedic day starts at sunrise. If birth is before ~6 AM, it typically falls under the previous day's lord.
-                if local_dt.hour < 6:
+                # Vedic day starts at sunrise. Compute actual sunrise to determine Vedic day lord.
+                from jyotisha.engines.astronomy import AstronomicalEngine
+                astro = AstronomicalEngine()
+                
+                local_midnight_dt = local_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+                utc_midnight_dt = local_midnight_dt - timedelta(hours=chart.birth_event.utc_offset_hours)
+                
+                midnight_jd = astro.datetime_to_jd(utc_midnight_dt)
+                sunrise_jd = astro.compute_sunrise(
+                    jd=midnight_jd,
+                    lat=chart.birth_event.location.latitude,
+                    lon=chart.birth_event.location.longitude,
+                    alt=chart.birth_event.location.altitude or 0.0
+                )
+                
+                if chart.birth_event.julian_day < sunrise_jd:
                     weekday = (weekday - 1) % 7
                     
                 # Monday=0, Sunday=6

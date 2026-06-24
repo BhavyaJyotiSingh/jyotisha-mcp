@@ -11,7 +11,7 @@ from typing import Optional
 from jyotisha.models.schemas import Chart, TransitResult, TransitHit
 from jyotisha.engines.astronomy import AstronomicalEngine
 from jyotisha.engines.calendar import CalendarEngine
-from jyotisha.constants import SPECIAL_ASPECTS
+from jyotisha.constants import SPECIAL_ASPECTS, Planet
 
 class TransitEngine:
     """
@@ -117,8 +117,12 @@ class TransitEngine:
                         ))
                         
                 # Check special aspects
-                if tp.name in SPECIAL_ASPECTS:
-                    for asp_house in SPECIAL_ASPECTS[tp.name]:
+                try:
+                    tp_enum = Planet(tp.name)
+                except ValueError:
+                    tp_enum = None
+                if tp_enum in SPECIAL_ASPECTS:
+                    for asp_house in SPECIAL_ASPECTS[tp_enum]:
                         asp_sign = (tp.sign_number + asp_house - 1) % 12
                         if np.sign_number == asp_sign:
                             orb = abs(tp.degree_in_sign - np.degree_in_sign)

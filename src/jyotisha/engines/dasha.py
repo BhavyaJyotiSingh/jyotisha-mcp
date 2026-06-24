@@ -166,8 +166,8 @@ class DashaEngine:
             sign_name = SIGN_NAMES[sign_num]
             
             # Find lord
-            from jyotisha.constants import SIGN_LORDS
-            lord_planet_name = SIGN_LORDS.get(sign_num)
+            from jyotisha.constants import SIGN_LORDS, Sign
+            lord_planet_name = SIGN_LORDS.get(Sign(sign_num)).value
             
             lord_pos = chart.get_planet(lord_planet_name)
             
@@ -242,8 +242,8 @@ class DashaEngine:
         start_idx = remainder - 1
         
         # Balance
-        degree_in_nakshatra = moon.longitude % 13.333333
-        proportion_elapsed = degree_in_nakshatra / 13.333333
+        degree_in_nakshatra = moon.longitude % NAKSHATRA_SPAN
+        proportion_elapsed = degree_in_nakshatra / NAKSHATRA_SPAN
         first_lord_years = yogini_order[start_idx][1]
         balance_years = first_lord_years * (1.0 - proportion_elapsed)
         
