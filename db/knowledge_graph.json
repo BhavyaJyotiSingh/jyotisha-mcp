@@ -1,0 +1,1113 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "sanskrit": "Surya",
+      "significations": [
+        "Soul",
+        "Father",
+        "Authority",
+        "Government",
+        "Health"
+      ],
+      "type": "Planet",
+      "id": "Sun"
+    },
+    {
+      "sanskrit": "Chandra",
+      "significations": [
+        "Mind",
+        "Mother",
+        "Emotions",
+        "Public",
+        "Liquids"
+      ],
+      "type": "Planet",
+      "id": "Moon"
+    },
+    {
+      "sanskrit": "Mangala",
+      "significations": [
+        "Energy",
+        "Brothers",
+        "Land",
+        "Courage",
+        "Surgery"
+      ],
+      "type": "Planet",
+      "id": "Mars"
+    },
+    {
+      "sanskrit": "Budha",
+      "significations": [
+        "Intelligence",
+        "Speech",
+        "Commerce",
+        "Education",
+        "Writing"
+      ],
+      "type": "Planet",
+      "id": "Mercury"
+    },
+    {
+      "sanskrit": "Guru",
+      "significations": [
+        "Wisdom",
+        "Children",
+        "Dharma",
+        "Wealth",
+        "Guru"
+      ],
+      "type": "Planet",
+      "id": "Jupiter"
+    },
+    {
+      "sanskrit": "Shukra",
+      "significations": [
+        "Love",
+        "Marriage",
+        "Art",
+        "Vehicles",
+        "Luxury"
+      ],
+      "type": "Planet",
+      "id": "Venus"
+    },
+    {
+      "sanskrit": "Shani",
+      "significations": [
+        "Longevity",
+        "Discipline",
+        "Servants",
+        "Sorrow",
+        "Hard Work"
+      ],
+      "type": "Planet",
+      "id": "Saturn"
+    },
+    {
+      "sanskrit": "Rahu",
+      "significations": [
+        "Foreign",
+        "Obsession",
+        "Technology",
+        "Unconventional",
+        "Illusion"
+      ],
+      "type": "Planet",
+      "id": "Rahu"
+    },
+    {
+      "sanskrit": "Ketu",
+      "significations": [
+        "Spirituality",
+        "Liberation",
+        "Ancestors",
+        "Mysticism",
+        "Loss"
+      ],
+      "type": "Planet",
+      "id": "Ketu"
+    },
+    {
+      "number": 0,
+      "sanskrit": "Mesha",
+      "element": "Fire",
+      "modality": "Movable",
+      "type": "Sign",
+      "id": "Aries"
+    },
+    {
+      "number": 1,
+      "sanskrit": "Vrishabha",
+      "element": "Earth",
+      "modality": "Fixed",
+      "type": "Sign",
+      "id": "Taurus"
+    },
+    {
+      "number": 2,
+      "sanskrit": "Mithuna",
+      "element": "Air",
+      "modality": "Dual",
+      "type": "Sign",
+      "id": "Gemini"
+    },
+    {
+      "number": 3,
+      "sanskrit": "Karka",
+      "element": "Water",
+      "modality": "Movable",
+      "type": "Sign",
+      "id": "Cancer"
+    },
+    {
+      "number": 4,
+      "sanskrit": "Simha",
+      "element": "Fire",
+      "modality": "Fixed",
+      "type": "Sign",
+      "id": "Leo"
+    },
+    {
+      "number": 5,
+      "sanskrit": "Kanya",
+      "element": "Earth",
+      "modality": "Dual",
+      "type": "Sign",
+      "id": "Virgo"
+    },
+    {
+      "number": 6,
+      "sanskrit": "Tula",
+      "element": "Air",
+      "modality": "Movable",
+      "type": "Sign",
+      "id": "Libra"
+    },
+    {
+      "number": 7,
+      "sanskrit": "Vrischika",
+      "element": "Water",
+      "modality": "Fixed",
+      "type": "Sign",
+      "id": "Scorpio"
+    },
+    {
+      "number": 8,
+      "sanskrit": "Dhanu",
+      "element": "Fire",
+      "modality": "Dual",
+      "type": "Sign",
+      "id": "Sagittarius"
+    },
+    {
+      "number": 9,
+      "sanskrit": "Makara",
+      "element": "Earth",
+      "modality": "Movable",
+      "type": "Sign",
+      "id": "Capricorn"
+    },
+    {
+      "number": 10,
+      "sanskrit": "Kumbha",
+      "element": "Air",
+      "modality": "Fixed",
+      "type": "Sign",
+      "id": "Aquarius"
+    },
+    {
+      "number": 11,
+      "sanskrit": "Meena",
+      "element": "Water",
+      "modality": "Dual",
+      "type": "Sign",
+      "id": "Pisces"
+    },
+    {
+      "number": 1,
+      "significations": [
+        "Self",
+        "Body",
+        "Appearance",
+        "Health",
+        "Personality"
+      ],
+      "type": "House",
+      "id": "House_1"
+    },
+    {
+      "number": 2,
+      "significations": [
+        "Wealth",
+        "Family",
+        "Speech",
+        "Food",
+        "Right Eye"
+      ],
+      "type": "House",
+      "id": "House_2"
+    },
+    {
+      "number": 3,
+      "significations": [
+        "Siblings",
+        "Courage",
+        "Short Travel",
+        "Communication",
+        "Hands"
+      ],
+      "type": "House",
+      "id": "House_3"
+    },
+    {
+      "number": 4,
+      "significations": [
+        "Mother",
+        "Home",
+        "Property",
+        "Vehicles",
+        "Education",
+        "Happiness"
+      ],
+      "type": "House",
+      "id": "House_4"
+    },
+    {
+      "number": 5,
+      "significations": [
+        "Children",
+        "Intelligence",
+        "Romance",
+        "Creativity",
+        "Purva Punya"
+      ],
+      "type": "House",
+      "id": "House_5"
+    },
+    {
+      "number": 6,
+      "significations": [
+        "Enemies",
+        "Disease",
+        "Debts",
+        "Service",
+        "Litigation"
+      ],
+      "type": "House",
+      "id": "House_6"
+    },
+    {
+      "number": 7,
+      "significations": [
+        "Marriage",
+        "Partner",
+        "Business",
+        "Foreign Travel",
+        "Death (Maraka)"
+      ],
+      "type": "House",
+      "id": "House_7"
+    },
+    {
+      "number": 8,
+      "significations": [
+        "Longevity",
+        "Occult",
+        "Inheritance",
+        "Transformation",
+        "Chronic Disease"
+      ],
+      "type": "House",
+      "id": "House_8"
+    },
+    {
+      "number": 9,
+      "significations": [
+        "Father",
+        "Dharma",
+        "Fortune",
+        "Higher Learning",
+        "Long Travel",
+        "Guru"
+      ],
+      "type": "House",
+      "id": "House_9"
+    },
+    {
+      "number": 10,
+      "significations": [
+        "Career",
+        "Karma",
+        "Authority",
+        "Status",
+        "Government"
+      ],
+      "type": "House",
+      "id": "House_10"
+    },
+    {
+      "number": 11,
+      "significations": [
+        "Gains",
+        "Income",
+        "Friends",
+        "Aspirations",
+        "Elder Siblings"
+      ],
+      "type": "House",
+      "id": "House_11"
+    },
+    {
+      "number": 12,
+      "significations": [
+        "Loss",
+        "Expenses",
+        "Foreign Lands",
+        "Liberation",
+        "Sleep",
+        "Left Eye"
+      ],
+      "type": "House",
+      "id": "House_12"
+    },
+    {
+      "number": 1,
+      "lord": "Ketu",
+      "type": "Nakshatra",
+      "id": "Ashwini"
+    },
+    {
+      "number": 2,
+      "lord": "Venus",
+      "type": "Nakshatra",
+      "id": "Bharani"
+    },
+    {
+      "number": 3,
+      "lord": "Sun",
+      "type": "Nakshatra",
+      "id": "Krittika"
+    },
+    {
+      "number": 4,
+      "lord": "Moon",
+      "type": "Nakshatra",
+      "id": "Rohini"
+    },
+    {
+      "number": 5,
+      "lord": "Mars",
+      "type": "Nakshatra",
+      "id": "Mrigashira"
+    },
+    {
+      "number": 6,
+      "lord": "Rahu",
+      "type": "Nakshatra",
+      "id": "Ardra"
+    },
+    {
+      "number": 7,
+      "lord": "Jupiter",
+      "type": "Nakshatra",
+      "id": "Punarvasu"
+    },
+    {
+      "number": 8,
+      "lord": "Saturn",
+      "type": "Nakshatra",
+      "id": "Pushya"
+    },
+    {
+      "number": 9,
+      "lord": "Mercury",
+      "type": "Nakshatra",
+      "id": "Ashlesha"
+    },
+    {
+      "number": 10,
+      "lord": "Ketu",
+      "type": "Nakshatra",
+      "id": "Magha"
+    },
+    {
+      "number": 11,
+      "lord": "Venus",
+      "type": "Nakshatra",
+      "id": "Purva Phalguni"
+    },
+    {
+      "number": 12,
+      "lord": "Sun",
+      "type": "Nakshatra",
+      "id": "Uttara Phalguni"
+    },
+    {
+      "number": 13,
+      "lord": "Moon",
+      "type": "Nakshatra",
+      "id": "Hasta"
+    },
+    {
+      "number": 14,
+      "lord": "Mars",
+      "type": "Nakshatra",
+      "id": "Chitra"
+    },
+    {
+      "number": 15,
+      "lord": "Rahu",
+      "type": "Nakshatra",
+      "id": "Swati"
+    },
+    {
+      "number": 16,
+      "lord": "Jupiter",
+      "type": "Nakshatra",
+      "id": "Vishakha"
+    },
+    {
+      "number": 17,
+      "lord": "Saturn",
+      "type": "Nakshatra",
+      "id": "Anuradha"
+    },
+    {
+      "number": 18,
+      "lord": "Mercury",
+      "type": "Nakshatra",
+      "id": "Jyeshtha"
+    },
+    {
+      "number": 19,
+      "lord": "Ketu",
+      "type": "Nakshatra",
+      "id": "Mula"
+    },
+    {
+      "number": 20,
+      "lord": "Venus",
+      "type": "Nakshatra",
+      "id": "Purva Ashadha"
+    },
+    {
+      "number": 21,
+      "lord": "Sun",
+      "type": "Nakshatra",
+      "id": "Uttara Ashadha"
+    },
+    {
+      "number": 22,
+      "lord": "Moon",
+      "type": "Nakshatra",
+      "id": "Shravana"
+    },
+    {
+      "number": 23,
+      "lord": "Mars",
+      "type": "Nakshatra",
+      "id": "Dhanishta"
+    },
+    {
+      "number": 24,
+      "lord": "Rahu",
+      "type": "Nakshatra",
+      "id": "Shatabhisha"
+    },
+    {
+      "number": 25,
+      "lord": "Jupiter",
+      "type": "Nakshatra",
+      "id": "Purva Bhadrapada"
+    },
+    {
+      "number": 26,
+      "lord": "Saturn",
+      "type": "Nakshatra",
+      "id": "Uttara Bhadrapada"
+    },
+    {
+      "number": 27,
+      "lord": "Mercury",
+      "type": "Nakshatra",
+      "id": "Revati"
+    },
+    {
+      "text": "If the 7th lord is in the 2nd house, the native will have many wives, or will be devoid of a wife, or his wife will be a source of wealth.",
+      "source": "BPHS",
+      "chapter": "Effects of 7th Lord",
+      "verse": "1",
+      "type": "Verse",
+      "id": "bphs_7th_lord_1"
+    },
+    {
+      "text": "The planet with the lowest degree in any sign becomes the Darakaraka. The Darakaraka represents the spouse.",
+      "source": "Jaimini Sutras",
+      "chapter": "Karakas",
+      "verse": "1",
+      "type": "Verse",
+      "id": "jaimini_darakaraka_1"
+    },
+    {
+      "text": "If the sub-lord of the 7th cusp is a significator of the 2nd, 7th, or 11th houses, marriage is promised.",
+      "source": "KP Reader 4",
+      "chapter": "Marriage",
+      "verse": "1",
+      "type": "Verse",
+      "id": "kp_marriage_1"
+    },
+    {
+      "text": "When lords of 9th and 10th houses conjunct or mutually aspect each other, a powerful Raja Yoga is formed.",
+      "source": "BPHS",
+      "chapter": "Raja Yogas",
+      "verse": "1",
+      "type": "Verse",
+      "id": "bphs_yoga_1"
+    }
+  ],
+  "edges": [
+    {
+      "relation": "rulesSign",
+      "source": "Sun",
+      "target": "Leo"
+    },
+    {
+      "exact_degree": 10.0,
+      "relation": "exaltedIn",
+      "source": "Sun",
+      "target": "Aries"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Sun",
+      "target": "Libra"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Sun",
+      "target": "Moon"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Sun",
+      "target": "Mars"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Sun",
+      "target": "Jupiter"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Sun",
+      "target": "Venus"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Sun",
+      "target": "Saturn"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Sun",
+      "target": "House_1"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Sun",
+      "target": "House_9"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Sun",
+      "target": "House_10"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Moon",
+      "target": "Cancer"
+    },
+    {
+      "exact_degree": 3.0,
+      "relation": "exaltedIn",
+      "source": "Moon",
+      "target": "Taurus"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Moon",
+      "target": "Scorpio"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Moon",
+      "target": "Sun"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Moon",
+      "target": "Mercury"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Moon",
+      "target": "House_4"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Mars",
+      "target": "Aries"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Mars",
+      "target": "Scorpio"
+    },
+    {
+      "exact_degree": 28.0,
+      "relation": "exaltedIn",
+      "source": "Mars",
+      "target": "Capricorn"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Mars",
+      "target": "Cancer"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Mars",
+      "target": "Sun"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Mars",
+      "target": "Moon"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Mars",
+      "target": "Jupiter"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Mars",
+      "target": "Mercury"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Mars",
+      "target": "House_3"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Mars",
+      "target": "House_6"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Mercury",
+      "target": "Gemini"
+    },
+    {
+      "relation": "exaltedIn",
+      "exact_degree": 15.0,
+      "source": "Mercury",
+      "target": "Virgo"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Mercury",
+      "target": "Pisces"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Mercury",
+      "target": "Sun"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Mercury",
+      "target": "Venus"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Mercury",
+      "target": "Moon"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Mercury",
+      "target": "House_4"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Mercury",
+      "target": "House_10"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Jupiter",
+      "target": "Sagittarius"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Jupiter",
+      "target": "Pisces"
+    },
+    {
+      "exact_degree": 5.0,
+      "relation": "exaltedIn",
+      "source": "Jupiter",
+      "target": "Cancer"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Jupiter",
+      "target": "Capricorn"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Jupiter",
+      "target": "Sun"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Jupiter",
+      "target": "Moon"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Jupiter",
+      "target": "Mars"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Jupiter",
+      "target": "Mercury"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Jupiter",
+      "target": "Venus"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Jupiter",
+      "target": "House_2"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Jupiter",
+      "target": "House_5"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Jupiter",
+      "target": "House_9"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Jupiter",
+      "target": "House_10"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Jupiter",
+      "target": "House_11"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Venus",
+      "target": "Taurus"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Venus",
+      "target": "Libra"
+    },
+    {
+      "exact_degree": 27.0,
+      "relation": "exaltedIn",
+      "source": "Venus",
+      "target": "Pisces"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Venus",
+      "target": "Virgo"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Venus",
+      "target": "Mercury"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Venus",
+      "target": "Saturn"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Venus",
+      "target": "Sun"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Venus",
+      "target": "Moon"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Venus",
+      "target": "House_7"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Saturn",
+      "target": "Capricorn"
+    },
+    {
+      "relation": "rulesSign",
+      "source": "Saturn",
+      "target": "Aquarius"
+    },
+    {
+      "exact_degree": 20.0,
+      "relation": "exaltedIn",
+      "source": "Saturn",
+      "target": "Libra"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Saturn",
+      "target": "Aries"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Saturn",
+      "target": "Mercury"
+    },
+    {
+      "relation": "friendsWith",
+      "source": "Saturn",
+      "target": "Venus"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Saturn",
+      "target": "Sun"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Saturn",
+      "target": "Moon"
+    },
+    {
+      "relation": "enemiesWith",
+      "source": "Saturn",
+      "target": "Mars"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Saturn",
+      "target": "House_6"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Saturn",
+      "target": "House_8"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Saturn",
+      "target": "House_10"
+    },
+    {
+      "relation": "karakaFor",
+      "source": "Saturn",
+      "target": "House_12"
+    },
+    {
+      "exact_degree": 20.0,
+      "relation": "exaltedIn",
+      "source": "Rahu",
+      "target": "Taurus"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Rahu",
+      "target": "Scorpio"
+    },
+    {
+      "exact_degree": 20.0,
+      "relation": "exaltedIn",
+      "source": "Ketu",
+      "target": "Scorpio"
+    },
+    {
+      "relation": "debilitatedIn",
+      "source": "Ketu",
+      "target": "Taurus"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Ashwini",
+      "target": "Ketu"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Bharani",
+      "target": "Venus"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Krittika",
+      "target": "Sun"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Rohini",
+      "target": "Moon"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Mrigashira",
+      "target": "Mars"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Ardra",
+      "target": "Rahu"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Punarvasu",
+      "target": "Jupiter"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Pushya",
+      "target": "Saturn"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Ashlesha",
+      "target": "Mercury"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Magha",
+      "target": "Ketu"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Purva Phalguni",
+      "target": "Venus"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Uttara Phalguni",
+      "target": "Sun"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Hasta",
+      "target": "Moon"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Chitra",
+      "target": "Mars"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Swati",
+      "target": "Rahu"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Vishakha",
+      "target": "Jupiter"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Anuradha",
+      "target": "Saturn"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Jyeshtha",
+      "target": "Mercury"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Mula",
+      "target": "Ketu"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Purva Ashadha",
+      "target": "Venus"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Uttara Ashadha",
+      "target": "Sun"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Shravana",
+      "target": "Moon"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Dhanishta",
+      "target": "Mars"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Shatabhisha",
+      "target": "Rahu"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Purva Bhadrapada",
+      "target": "Jupiter"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Uttara Bhadrapada",
+      "target": "Saturn"
+    },
+    {
+      "relation": "planetInNakshatra",
+      "source": "Revati",
+      "target": "Mercury"
+    },
+    {
+      "relation": "refersTo",
+      "source": "bphs_7th_lord_1",
+      "target": "House_7"
+    },
+    {
+      "relation": "refersTo",
+      "source": "bphs_7th_lord_1",
+      "target": "House_2"
+    },
+    {
+      "relation": "refersTo",
+      "source": "jaimini_darakaraka_1",
+      "target": "House_7"
+    },
+    {
+      "relation": "refersTo",
+      "source": "kp_marriage_1",
+      "target": "House_7"
+    },
+    {
+      "relation": "refersTo",
+      "source": "kp_marriage_1",
+      "target": "House_2"
+    },
+    {
+      "relation": "refersTo",
+      "source": "kp_marriage_1",
+      "target": "House_11"
+    },
+    {
+      "relation": "refersTo",
+      "source": "bphs_yoga_1",
+      "target": "House_9"
+    },
+    {
+      "relation": "refersTo",
+      "source": "bphs_yoga_1",
+      "target": "House_10"
+    }
+  ]
+}

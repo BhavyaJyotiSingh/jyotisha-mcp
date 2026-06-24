@@ -14,6 +14,29 @@ try:
 except ImportError:
     HAS_CHROMA = False
 
+MOCK_TEXTS = [
+    {
+        "id": "bphs_7th_lord_1",
+        "text": "If the 7th lord is in the 2nd house, the native will have many wives, or will be devoid of a wife, or his wife will be a source of wealth.",
+        "metadata": {"source": "BPHS", "chapter": "Effects of 7th Lord"}
+    },
+    {
+        "id": "jaimini_darakaraka_1",
+        "text": "The planet with the lowest degree in any sign becomes the Darakaraka. The Darakaraka represents the spouse.",
+        "metadata": {"source": "Jaimini Sutras", "chapter": "Karakas"}
+    },
+    {
+        "id": "kp_marriage_1",
+        "text": "If the sub-lord of the 7th cusp is a significator of the 2nd, 7th, or 11th houses, marriage is promised.",
+        "metadata": {"source": "KP Reader 4", "chapter": "Marriage"}
+    },
+    {
+        "id": "bphs_yoga_1",
+        "text": "When lords of 9th and 10th houses conjunct or mutually aspect each other, a powerful Raja Yoga is formed.",
+        "metadata": {"source": "BPHS", "chapter": "Raja Yogas"}
+    }
+]
+
 class JyotishaRetriever:
     """Retrieves classical texts matching astrological conditions."""
     
@@ -42,6 +65,17 @@ class JyotishaRetriever:
             embedding_function=self.ef,
             metadata={"hnsw:space": "cosine"}
         )
+        
+        # Prepopulate with mock texts if empty
+        if self.collection.count() == 0:
+            documents = [t["text"] for t in MOCK_TEXTS]
+            metadatas = [t["metadata"] for t in MOCK_TEXTS]
+            ids = [t["id"] for t in MOCK_TEXTS]
+            self.collection.add(
+                documents=documents,
+                metadatas=metadatas,
+                ids=ids
+            )
 
     def query(
         self, 

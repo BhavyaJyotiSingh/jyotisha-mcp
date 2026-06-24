@@ -21,7 +21,10 @@ from jyotisha.engines.panchanga import PanchangaEngine
 from jyotisha.engines.special import SpecialPointsEngine
 from jyotisha.engines.muhurta import MuhurtaEngine
 from jyotisha.engines.prashna import PrashnaEngine
-from jyotisha.rag.retriever import JyotishaRetriever, HAS_CHROMA
+from jyotisha.rag.retriever import HAS_CHROMA
+from jyotisha.rag.hybrid import HybridRetriever
+from jyotisha.knowledge.graph import VedicAstrologyGraph
+import jyotisha.knowledge.queries as graph_queries
 from jyotisha.constants import Ayanamsha
 from jyotisha.db.database import init_db
 
@@ -45,9 +48,11 @@ special_engine = SpecialPointsEngine(astro_engine=chart_engine.astro)
 muhurta_engine = MuhurtaEngine(chart_engine=chart_engine)
 prashna_engine = PrashnaEngine(chart_engine=chart_engine, kp_module=kp_module)
 
-rag_retriever = None
+# Initialize Knowledge Graph and Hybrid RAG Retriever
+astrology_graph = VedicAstrologyGraph()
+hybrid_retriever = None
 if HAS_CHROMA:
-    rag_retriever = JyotishaRetriever()
+    hybrid_retriever = HybridRetriever(graph=astrology_graph)
 
 
 @mcp.tool()
@@ -286,21 +291,63 @@ async def query_classical_texts(
     source_filter: Optional[str] = None
 ) -> str:
     """
-    Search the local vector database for classical astrological verses matching the query.
+    Search the local hybrid database (Vector store + Knowledge Graph) for classical astrological verses.
     Example query: "Moon in 7th house" or "Gajakesari yoga"
     """
-    if not rag_retriever:
-        return "RAG module is not available. Please ensure ChromaDB and sentence-transformers are installed."
+    if not hybrid_retriever:
+        return "Hybrid RAG module is not available. Please ensure ChromaDB and sentence-transformers are installed."
         
     try:
-        filters = {}
+        results = hybrid_retriever.query(query_text, n_results=n_results)
+        # Apply source filter if provided
         if source_filter:
-            filters["source"] = source_filter
-            
-        results = rag_retriever.query(query_text, n_results=n_results, filter_metadata=filters if filters else None)
+            results = [r for r in results if r.get("metadata", {}).get("source") == source_filter]
         return json.dumps(results, indent=2)
     except Exception as e:
         return f"Error querying classical texts: {e}"
+
+
+@mcp.tool()
+async def get_knowledge_relations(node_id: str) -> str:
+    """
+    Retrieve all outgoing and incoming relationships for a node in the Vedic Astrology Knowledge Graph.
+    Example nodes: 'Sun', 'Mars', 'Aries', 'House_7', 'bphs_7th_lord_1'
+    """
+    try:
+        outgoing = astrology_graph.get_relations(node_id)
+        incoming = astrology_graph.get_inverse_relations(node_id)
+        return json.dumps({
+            "node_id": node_id,
+            "outgoing_relations": outgoing,
+            "incoming_relations": incoming
+        }, indent=2)
+    except Exception as e:
+        return f"Error retrieving relations: {e}"
+
+
+@mcp.tool()
+async def get_planet_ontology(planet_name: str) -> str:
+    """
+    Retrieve structured ontological details (sanskrit name, significations, exaltation/debilitation, friends/enemies) for a planet.
+    Example planet_name: 'Sun', 'Venus', 'Rahu'
+    """
+    try:
+        details = graph_queries.get_planet_details(astrology_graph, planet_name)
+        return json.dumps(details, indent=2)
+    except Exception as e:
+        return f"Error retrieving planet ontology: {e}"
+
+
+@mcp.tool()
+async def get_house_ontology(house_number: int) -> str:
+    """
+    Retrieve structured ontological details (significations, karakas) for a house (1 to 12).
+    """
+    try:
+        details = graph_queries.get_house_ontology(astrology_graph, house_number)
+        return json.dumps(details, indent=2)
+    except Exception as e:
+        return f"Error retrieving house ontology: {e}"
 
 
 @mcp.tool()

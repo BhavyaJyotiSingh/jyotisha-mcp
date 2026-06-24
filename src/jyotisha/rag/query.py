@@ -1,62 +1,33 @@
 """
-RAG Query - Mock for Phase 5
-
-Queries the ChromaDB collection for relevant astrological rules.
+RAG Query - Backwards-compatible wrapper around persistent JyotishaRetriever.
 """
 
 from __future__ import annotations
-from importlib.util import find_spec
 from typing import Optional
-
-from jyotisha.rag.ingestion import RAGIngestion
-
-HAS_CHROMA = find_spec("chromadb") is not None
+from jyotisha.rag.retriever import JyotishaRetriever
 
 class RAGQuery:
-    """Queries the RAG knowledge base for astrological rules."""
+    """Wrapper that matches the legacy RAGQuery interface, backed by JyotishaRetriever."""
     
-    def __init__(self, ingester: Optional[RAGIngestion] = None):
-        if not HAS_CHROMA:
-            self.collection = None
-            return
-            
-        # For this mock, we share the ephemeral ingester's client so it stays in memory
-        self.ingester = ingester or RAGIngestion()
-        self.ingester.ingest_mock_data()
-        self.collection = self.ingester.collection
+    def __init__(self, retriever: Optional[JyotishaRetriever] = None):
+        self.retriever = retriever or JyotishaRetriever()
 
     def query(self, query_text: str, n_results: int = 2) -> list[dict]:
         """
-        Query the RAG system for rules related to the query text.
+        Query the persistent RAG system for rules related to the query text.
         
         Returns:
             List of dictionaries containing text, source, and chapter.
         """
-        if not self.collection:
-            return []
-
-        results = self.collection.query(
-            query_texts=[query_text],
-            n_results=n_results
-        )
+        raw_results = self.retriever.query(query_text, n_results=n_results)
         
         formatted_results = []
-        if results and "documents" in results and results["documents"]:
-            docs = results["documents"][0]
-            metas = results["metadatas"][0]
+        for res in raw_results:
+            meta = res.get("metadata", {})
+            formatted_results.append({
+                "text": res.get("text", ""),
+                "source": meta.get("source", "Unknown"),
+                "chapter": meta.get("chapter", "Unknown")
+            })
             
-            for doc, meta in zip(docs, metas):
-                formatted_results.append({
-                    "text": doc,
-                    "source": meta.get("source", "Unknown"),
-                    "chapter": meta.get("chapter", "Unknown")
-                })
-                
         return formatted_results
-
-if __name__ == "__main__":
-    q = RAGQuery()
-    print("Querying for 'marriage indicators':")
-    res = q.query("marriage indicators")
-    for r in res:
-        print(f"- {r['text']} (Source: {r['source']})")
